@@ -113,7 +113,11 @@ export default function RootPage() {
             </span>
 
             <h1 className="text-5xl md:text-8xl font-extrabold mb-8 tracking-tighter leading-tight">
-              Jasa Pembuatan Website & Dashboard Untuk Bisnis Modern
+              Where Ideas Come
+              <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00f5a0] to-[#00d48a]">
+                Back to Life.
+              </span>
             </h1>
 
             <p className="text-gray-400 text-lg md:text-xl mb-12 max-w-2xl mx-auto leading-relaxed">
@@ -138,12 +142,8 @@ export default function RootPage() {
               Services
             </h2>
             <h3 className="text-3xl md:text-4xl font-bold mb-4">
-              Layanan pengembangan website dan aplikasi web custom
+              Website development
             </h3>
-            <p className="text-gray-400 text-base md:text-lg">
-              Kami membantu bisnis, brand, dan creator membangun website modern, dashboard internal, serta produk
-              digital yang terukur menggunakan teknologi seperti Next.js, TypeScript, dan PocketBase.
-            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -185,7 +185,7 @@ export default function RootPage() {
                 About
               </h2>
               <h3 className="text-3xl md:text-4xl font-bold mb-4">
-                Studio kecil, fokus pada detail dan sistem yang rapi
+                Studio kecil, fokus pada detail & sistem
               </h3>
               <p className="text-gray-400 text-base md:text-lg mb-4">
                 Revival Digital Studio berfokus pada pembuatan website, dashboard, dan aplikasi web yang tidak hanya
@@ -256,12 +256,12 @@ export default function RootPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <article className="card card-hover p-6 flex flex-col md:flex-row gap-6">
               <div className="flex-1">
-                <h3 className="text-lg font-semibold mb-1">KostHub — Property Management System</h3>
+                <h3 className="text-lg font-semibold mb-1">KostHub —</h3>
                 <p className="text-xs uppercase tracking-[0.18em] text-[#00f5a0] mb-3">
-                  Web Application · Dashboard · Automation
+                  Property Management System
                 </p>
                 <p className="text-sm text-gray-300 mb-3">
-                  Platform manajemen properti berbasis web yang mendigitalisasi operasional rumah kost,
+                  Platform manajemen kost berbasis web yang mendigitalisasi operasional rumah kost,
                   mulai dari manajemen hunian, penyewa, hingga laporan keuangan otomatis dalam satu dashboard.
                 </p>
                 <p className="text-xs text-gray-500">
