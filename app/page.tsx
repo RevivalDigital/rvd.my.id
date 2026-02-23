@@ -150,7 +150,7 @@ export default function RootPage() {
                 <svg className="w-5 h-5 text-[#00f5a0]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                 </svg>
-                Next.js 15 & Turbopack
+                Next.js & Turbopack
               </li>
               <li className="flex items-center gap-3">
                 <svg className="w-5 h-5 text-[#00f5a0]" fill="none" stroke="currentColor" viewBox="0 0 24 24">

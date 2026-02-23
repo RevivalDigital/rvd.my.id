@@ -104,7 +104,7 @@ export default function DashboardPage() {
     const loadSites = async () => {
       try {
         const list = await pb.collection("site_health").getFullList({ sort: "-last_checked" });
-        setSiteRecords(list as SiteHealth[]);
+        setSiteRecords(list as unknown as SiteHealth[]);
       } catch (error) {
         console.error("Failed to load site health records for dashboard", error);
       }
