@@ -261,7 +261,7 @@ export default function RootPage() {
                   Web Application · Dashboard · Automation
                 </p>
                 <p className="text-sm text-gray-300 mb-3">
-                  KostHub adalah platform manajemen properti berbasis web yang mendigitalisasi operasional rumah kost,
+                  Platform manajemen properti berbasis web yang mendigitalisasi operasional rumah kost,
                   mulai dari manajemen hunian, penyewa, hingga laporan keuangan otomatis dalam satu dashboard.
                 </p>
                 <p className="text-xs text-gray-500">
@@ -270,7 +270,7 @@ export default function RootPage() {
               </div>
               <div className="md:w-64 w-full">
                 <div className="rounded-xl overflow-hidden border border-white/10 bg-[#0f1115] aspect-video flex items-center justify-center text-xs text-gray-500">
-                  <span>KostHub dashboard preview (dummy image)</span>
+                  <span>KostHub manajemen all-in-one</span>
                 </div>
               </div>
             </article>
