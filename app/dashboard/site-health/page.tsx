@@ -81,7 +81,7 @@ export default function SiteHealthPage() {
     try {
       setIsLoading(true);
       const list = await pb.collection("site_health").getFullList({ sort: "-last_checked" });
-      setRecords(list as SiteHealth[]);
+      setRecords(list as unknown as SiteHealth[]);
     } catch (error) {
       console.error("Failed to load site health records", error);
     } finally {
