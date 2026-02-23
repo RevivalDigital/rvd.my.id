@@ -269,8 +269,12 @@ export default function RootPage() {
                 </p>
               </div>
               <div className="md:w-64 w-full">
-                <div className="rounded-xl overflow-hidden border border-white/10 bg-[#0f1115] aspect-video flex items-center justify-center text-xs text-gray-500">
-                  <span>KostHub manajemen all-in-one</span>
+                <div className="rounded-xl overflow-hidden border border-white/10 bg-[#0f1115] aspect-video">
+                  <img
+                    src="/images/kosthub-dashboard.png"
+                    alt="Tampilan dashboard KostHub untuk manajemen rumah kost"
+                    className="w-full h-full object-cover"
+                  />
                 </div>
               </div>
             </article>
