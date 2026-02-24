@@ -40,12 +40,12 @@ const engagementData = [
   { day: "Sun", reach: 2400, engagement: 760 },
 ];
 
-const tasks = [
-  { id: 1, title: "Implement OAuth2 PocketBase", status: "in_progress", priority: "high", assignee: "Alex", type: "feature" },
-  { id: 2, title: "Design landing page v2", status: "review", priority: "medium", assignee: "Rina", type: "design" },
-  { id: 3, title: "Schedule IG posts for week", status: "todo", priority: "urgent", assignee: "Dito", type: "content" },
-  { id: 4, title: "Fix Lighthouse score < 90", status: "in_progress", priority: "high", assignee: "Alex", type: "devops" },
-  { id: 5, title: "Write blog post: Next.js 16", status: "todo", priority: "medium", assignee: "Rina", type: "content" },
+const tasks: Partial<Task>[] = [
+  { id: "1", title: "Implement OAuth2 PocketBase", status: "in_progress", priority: "high", assignee: "Alex", type: "feature" },
+  { id: "2", title: "Design landing page v2", status: "review", priority: "medium", assignee: "Rina", type: "design" },
+  { id: "3", title: "Schedule IG posts for week", status: "todo", priority: "urgent", assignee: "Dito", type: "content" },
+  { id: "4", title: "Fix Lighthouse score < 90", status: "in_progress", priority: "high", assignee: "Alex", type: "devops" },
+  { id: "5", title: "Write blog post: Next.js 16", status: "todo", priority: "medium", assignee: "Rina", type: "content" },
 ];
 
 const gitActivity = [
@@ -68,11 +68,11 @@ type WidgetSite = {
   };
 };
 
-const upcomingEvents = [
-  { title: "Feature Release: Auth v2", type: "feature_release", date: "Today, 5 PM", color: "#00f5a0" },
-  { title: "IG Post: Monday Motivation", type: "social_post", date: "Tomorrow, 9 AM", color: "#1890ff" },
-  { title: "Sprint Review Meeting", type: "meeting", date: "Wed, 2 PM", color: "#faad14" },
-  { title: "LinkedIn Article Publish", type: "social_post", date: "Thu, 10 AM", color: "#1890ff" },
+const upcomingEvents: Partial<CalendarEvent & { date?: string }>[] = [
+  { id: "ev1", title: "Feature Release: Auth v2", type: "feature_release", date: "Today, 5 PM", color: "#00f5a0" },
+  { id: "ev2", title: "IG Post: Monday Motivation", type: "social_post", date: "Tomorrow, 9 AM", color: "#1890ff" },
+  { id: "ev3", title: "Sprint Review Meeting", type: "meeting", date: "Wed, 2 PM", color: "#faad14" },
+  { id: "ev4", title: "LinkedIn Article Publish", type: "social_post", date: "Thu, 10 AM", color: "#1890ff" },
 ];
 
 const statusColors: Record<string, string> = {
@@ -151,8 +151,8 @@ export default function DashboardPage() {
     loadEvents();
   }, []);
 
-  const displayTasks = taskRecords.length > 0 ? taskRecords : tasks;
-  const displayEvents = eventRecords.length > 0 ? eventRecords : upcomingEvents;
+  const displayTasks = (taskRecords.length > 0 ? taskRecords : tasks) as Task[];
+  const displayEvents = (eventRecords.length > 0 ? eventRecords : upcomingEvents) as (CalendarEvent & { date?: string })[];
 
   const widgetSites: WidgetSite[] = useMemo(() => {
     const mapped = siteRecords.map((record) => {
