@@ -151,8 +151,8 @@ export default function DashboardPage() {
     loadEvents();
   }, []);
 
-  const displayTasks = (taskRecords.length > 0 ? taskRecords : tasks) as Task[];
-  const displayEvents = (eventRecords.length > 0 ? eventRecords : upcomingEvents) as (CalendarEvent & { date?: string })[];
+  const displayTasks = (taskRecords.length > 0 ? taskRecords : tasks) as any[];
+  const displayEvents = (eventRecords.length > 0 ? eventRecords : upcomingEvents) as any[];
 
   const widgetSites: WidgetSite[] = useMemo(() => {
     const mapped = siteRecords.map((record) => {
