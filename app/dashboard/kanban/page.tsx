@@ -42,75 +42,6 @@ const pbBaseUrl =
 const pb = new PocketBase(pbBaseUrl);
 pb.autoCancellation(false);
 
-function ChecklistAdder({
-  task,
-  setTasks,
-}: {
-  task: Task;
-  setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
-}) {
-  const [text, setText] = useState("");
-  return (
-    <div className="mt-2 flex items-center gap-2">
-      <input
-        type="text"
-        className="flex-1 px-2 py-1 rounded bg-[var(--surface-2)] border border-[var(--border)] text-[11px] outline-none"
-        placeholder="Tambah checklist..."
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onKeyDown={async (e) => {
-          if (e.key === "Enter") {
-            const val = text.trim();
-            if (!val) return;
-            const next = [...(task.checklist || []), { text: val, done: false }];
-            try {
-              const record = await pb
-                .collection("tasks")
-                .update(task.id, { checklist: next });
-              setTasks((prev) =>
-                prev.map((t) =>
-                  t.id === task.id
-                    ? { ...t, checklist: record.checklist || next }
-                    : t
-                )
-              );
-              setText("");
-            } catch (error) {
-              console.error("Failed to add checklist item", error);
-            }
-          }
-        }}
-      />
-      <button
-        className="w-6 h-6 rounded-md flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--accent)] hover:bg-[var(--accent-dim)]"
-        onClick={async () => {
-          const val = text.trim();
-          if (!val) return;
-          const next = [...(task.checklist || []), { text: val, done: false }];
-          try {
-            const record = await pb
-              .collection("tasks")
-              .update(task.id, { checklist: next });
-            setTasks((prev) =>
-              prev.map((t) =>
-                t.id === task.id
-                  ? { ...t, checklist: record.checklist || next }
-                  : t
-              )
-            );
-            setText("");
-          } catch (error) {
-            console.error("Failed to add checklist item", error);
-          }
-        }}
-        title="Tambah checklist"
-      >
-        <Plus size={14} />
-      </button>
-    </div>
-  );
-}
-
 export default function KanbanPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [dragging, setDragging] = useState<string | null>(null);
@@ -137,6 +68,8 @@ export default function KanbanPage() {
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
   const [deleteTask, setDeleteTask] = useState<Task | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [formChecklist, setFormChecklist] = useState<{ text: string; done: boolean }[]>([]);
+  const [formChecklistText, setFormChecklistText] = useState("");
   const [newChecklistText, setNewChecklistText] = useState("");
   const [editingChecklistIndex, setEditingChecklistIndex] = useState<number | null>(null);
   const [editingChecklistText, setEditingChecklistText] = useState("");
@@ -309,6 +242,8 @@ export default function KanbanPage() {
     setFormTagsText("");
     setFormAttachments(null);
     setFormExistingAttachments([]);
+    setFormChecklist([]);
+    setFormChecklistText("");
     setIsFormOpen(true);
   };
 
@@ -348,6 +283,8 @@ export default function KanbanPage() {
     setFormExistingAttachments(
       Array.isArray(task.attachments) ? (task.attachments as string[]) : []
     );
+    setFormChecklist(Array.isArray(task.checklist) ? task.checklist : []);
+    setFormChecklistText("");
     setIsFormOpen(true);
   };
 
@@ -387,7 +324,7 @@ export default function KanbanPage() {
       const basePayload: any = {
         title: formTitle.trim(),
         description: formDescription.trim() || null,
-        checklist: null,
+        checklist: formMode === "edit" ? formChecklist : null,
         status: formStatus,
         priority: formPriority,
         type: formType || null,
@@ -716,8 +653,6 @@ export default function KanbanPage() {
                         </div>
                       )}
 
-                      <ChecklistAdder task={task} setTasks={setTasks} />
-
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1">
                           {((task.assignees && task.assignees.length > 0)
@@ -802,6 +737,82 @@ export default function KanbanPage() {
                   onChange={(e) => setFormDescription(e.target.value)}
                 />
               </div>
+              {formMode === "edit" && (
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-[var(--text-secondary)]">
+                    Checklist
+                  </label>
+                  {formChecklist.length > 0 && (
+                    <div className="space-y-1">
+                      {formChecklist.map((item, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            className={`px-2 py-1 rounded border text-[11px] ${
+                              item.done
+                                ? "bg-[var(--accent-dim)] border-[var(--accent-border)]"
+                                : "border-[var(--border)]"
+                            }`}
+                            onClick={() => {
+                              setFormChecklist((prev) =>
+                                prev.map((it, i) =>
+                                  i === idx ? { ...it, done: !it.done } : it
+                                )
+                              );
+                            }}
+                          >
+                            {item.done ? "✔" : "○"}
+                          </button>
+                          <input
+                            className="flex-1 px-2 py-1 rounded bg-[var(--surface-2)] border border-[var(--border)] text-[11px] outline-none"
+                            value={item.text}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setFormChecklist((prev) =>
+                                prev.map((it, i) =>
+                                  i === idx ? { ...it, text: val } : it
+                                )
+                              );
+                            }}
+                          />
+                          <button
+                            type="button"
+                            className="px-2 py-1 rounded bg-red-500/10 text-red-400 text-[11px]"
+                            onClick={() => {
+                              setFormChecklist((prev) =>
+                                prev.filter((_, i) => i !== idx)
+                              );
+                            }}
+                          >
+                            Hapus
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="mt-1 flex items-center gap-2">
+                    <input
+                      type="text"
+                      className="flex-1 px-2 py-1 rounded bg-[var(--surface-2)] border border-[var(--border)] text-[11px] outline-none"
+                      placeholder="Tambah checklist..."
+                      value={formChecklistText}
+                      onChange={(e) => setFormChecklistText(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className="px-2 py-1 rounded bg-[var(--accent)] text-black text-[11px]"
+                      onClick={() => {
+                        const val = formChecklistText.trim();
+                        if (!val) return;
+                        setFormChecklist((prev) => [...prev, { text: val, done: false }]);
+                        setFormChecklistText("");
+                      }}
+                    >
+                      Tambah
+                    </button>
+                  </div>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-[var(--text-secondary)]">
