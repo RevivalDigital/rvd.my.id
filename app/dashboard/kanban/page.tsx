@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Topbar from "@/components/Topbar";
-import { Plus, MoreHorizontal, GripVertical, User, Calendar, Tag, Paperclip, Folder } from "lucide-react";
+import { Plus, MoreHorizontal, GripVertical, User, Calendar, Tag, Paperclip, Folder, Loader2, Trash2 } from "lucide-react";
 import type { Task, TaskStatus, User as DashboardUser, Project } from "@/types";
 import PocketBase from "pocketbase";
 
@@ -11,18 +11,6 @@ const COLUMNS: { id: TaskStatus; label: string; color: string }[] = [
   { id: "in_progress", label: "In Progress", color: "#1890ff" },
   { id: "review", label: "Review", color: "#faad14" },
   { id: "done", label: "Done", color: "var(--accent)" },
-];
-
-const INITIAL_TASKS: Task[] = [
-  { id: "t1", title: "Implement OAuth2 with PocketBase", status: "in_progress", priority: "high", type: "feature", assignee: "Alex", created: "", updated: "" },
-  { id: "t2", title: "Fix mobile nav hamburger", status: "done", priority: "medium", type: "bug", assignee: "Alex", created: "", updated: "" },
-  { id: "t3", title: "Design landing page v2 hero section", status: "review", priority: "medium", type: "design", assignee: "Rina", created: "", updated: "" },
-  { id: "t4", title: "Schedule IG posts for this week", status: "todo", priority: "urgent", type: "content", assignee: "Dito", created: "", updated: "" },
-  { id: "t5", title: "Improve Lighthouse score to 95+", status: "in_progress", priority: "high", type: "devops", assignee: "Alex", created: "", updated: "" },
-  { id: "t6", title: "Write blog post about Next.js 16", status: "todo", priority: "medium", type: "content", assignee: "Rina", created: "", updated: "" },
-  { id: "t7", title: "Setup PocketBase collections", status: "done", priority: "high", type: "feature", assignee: "Alex", created: "", updated: "" },
-  { id: "t8", title: "Create LinkedIn content calendar", status: "todo", priority: "low", type: "content", assignee: "Dito", created: "", updated: "" },
-  { id: "t9", title: "Code review: auth module PR", status: "review", priority: "high", type: "feature", assignee: "Rina", created: "", updated: "" },
 ];
 
 const priorityStyles: Record<string, string> = {
@@ -55,7 +43,7 @@ const pb = new PocketBase(pbBaseUrl);
 pb.autoCancellation(false);
 
 export default function KanbanPage() {
-  const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [dragging, setDragging] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState<TaskStatus | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -77,6 +65,15 @@ export default function KanbanPage() {
   const [formTagsText, setFormTagsText] = useState("");
   const [formAttachments, setFormAttachments] = useState<FileList | null>(null);
   const [formExistingAttachments, setFormExistingAttachments] = useState<string[]>([]);
+  const [isLoadingTasks, setIsLoadingTasks] = useState(false);
+  const [deleteTask, setDeleteTask] = useState<Task | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [formChecklist, setFormChecklist] = useState<{ text: string; done: boolean }[]>([]);
+  const [formChecklistText, setFormChecklistText] = useState("");
+  const [newChecklistText, setNewChecklistText] = useState("");
+  const [editingChecklistIndex, setEditingChecklistIndex] = useState<number | null>(null);
+  const [editingChecklistText, setEditingChecklistText] = useState("");
+  const [newChecklistLoading, setNewChecklistLoading] = useState(false);
 
   const authModel = pb.authStore.model as any;
 
@@ -85,6 +82,7 @@ export default function KanbanPage() {
 
     async function loadTasks() {
       try {
+        setIsLoadingTasks(true);
         const records = await pb
           .collection("tasks")
           .getFullList({ sort: "+sort_order", expand: "assignee,project" });
@@ -111,10 +109,12 @@ export default function KanbanPage() {
             id: r.id,
             title: r.title,
             description: r.description,
+            checklist: r.checklist,
             status: r.status,
             priority: r.priority,
             type: r.type,
             project: r.project,
+            created_by: r.created_by,
             assignee: assigneeNames[0] || assigneeIds[0],
             assignees: assigneeNames.length ? assigneeNames : assigneeIds,
             created: r.created,
@@ -133,6 +133,10 @@ export default function KanbanPage() {
         setTasks(mapped);
       } catch (error) {
         console.error("Failed to load tasks from PocketBase", error);
+      } finally {
+        if (!cancelled) {
+          setIsLoadingTasks(false);
+        }
       }
     }
 
@@ -240,6 +244,8 @@ export default function KanbanPage() {
     setFormTagsText("");
     setFormAttachments(null);
     setFormExistingAttachments([]);
+    setFormChecklist([]);
+    setFormChecklistText("");
     setIsFormOpen(true);
   };
 
@@ -279,6 +285,8 @@ export default function KanbanPage() {
     setFormExistingAttachments(
       Array.isArray(task.attachments) ? (task.attachments as string[]) : []
     );
+    setFormChecklist(Array.isArray(task.checklist) ? task.checklist : []);
+    setFormChecklistText("");
     setIsFormOpen(true);
   };
 
@@ -286,6 +294,28 @@ export default function KanbanPage() {
     if (isSubmitting) return;
     setIsFormOpen(false);
     setEditingTask(null);
+  };
+
+  const openDeleteConfirm = (task: Task) => {
+    setDeleteTask(task);
+    setOptionsTask(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTask) return;
+    try {
+      setIsDeleting(true);
+      await pb.collection("tasks").delete(deleteTask.id);
+      setTasks((prev) => prev.filter((t) => t.id !== deleteTask.id));
+      if (viewTask && viewTask.id === deleteTask.id) {
+        setViewTask(null);
+      }
+    } catch (error) {
+      console.error("Failed to delete task", error);
+    } finally {
+      setIsDeleting(false);
+      setDeleteTask(null);
+    }
   };
 
   const handleFormSubmit = async (e: any) => {
@@ -296,6 +326,7 @@ export default function KanbanPage() {
       const basePayload: any = {
         title: formTitle.trim(),
         description: formDescription.trim() || null,
+        checklist: formMode === "edit" ? formChecklist : null,
         status: formStatus,
         priority: formPriority,
         type: formType || null,
@@ -323,14 +354,40 @@ export default function KanbanPage() {
           }
         );
 
+        try {
+          const newAssigneeIds: string[] = Array.isArray(record.assignee)
+            ? (record.assignee as string[])
+            : record.assignee
+            ? [record.assignee as string]
+            : [];
+          await Promise.all(
+            newAssigneeIds.map((uid) =>
+              pb.collection("notifications").create({
+                title: "Task Assigned",
+                body: `Anda ditugaskan pada task: ${record.title}`,
+                type: "task_assigned",
+                severity: "info",
+                recipient: uid,
+                is_read: false,
+                entity_type: "task",
+                entity_id: record.id,
+              })
+            )
+          );
+        } catch (err) {
+          console.error("Failed to create assignment notifications", err);
+        }
+
         const newTask: Task = {
           id: record.id,
           title: record.title,
           description: record.description || undefined,
+          checklist: record.checklist || [],
           status: record.status,
           priority: record.priority,
           type: record.type || undefined,
           project: record.project,
+          created_by: record.created_by,
           assignee: Array.isArray(record.expand?.assignee)
             ? ((record.expand?.assignee[0]?.name as string) ||
                 (record.expand?.assignee[0]?.email as string) ||
@@ -382,6 +439,36 @@ export default function KanbanPage() {
           }
         );
 
+        try {
+          const prevIdsFromExpand = Array.isArray((editingTask.expand as any)?.assignee)
+            ? ((editingTask.expand as any)?.assignee as any[]).map((u) => u.id as string)
+            : (editingTask.expand as any)?.assignee
+            ? [((editingTask.expand as any)?.assignee as any).id as string]
+            : [];
+          const newAssigneeIds: string[] = Array.isArray(record.assignee)
+            ? (record.assignee as string[])
+            : record.assignee
+            ? [record.assignee as string]
+            : [];
+          const added = newAssigneeIds.filter((id) => !prevIdsFromExpand.includes(id));
+          await Promise.all(
+            added.map((uid) =>
+              pb.collection("notifications").create({
+                title: "Task Assigned",
+                body: `Anda ditugaskan pada task: ${record.title}`,
+                type: "task_assigned",
+                severity: "info",
+                recipient: uid,
+                is_read: false,
+                entity_type: "task",
+                entity_id: record.id,
+              })
+            )
+          );
+        } catch (err) {
+          console.error("Failed to create assignment notifications (update)", err);
+        }
+
         setTasks((prev) =>
           prev.map((t) =>
             t.id === editingTask.id
@@ -389,6 +476,7 @@ export default function KanbanPage() {
                   ...t,
                   title: record.title,
                   description: record.description || undefined,
+                  checklist: record.checklist || t.checklist || [],
                   status: record.status,
                   priority: record.priority,
                   type: record.type || undefined,
@@ -442,11 +530,45 @@ export default function KanbanPage() {
     }
   };
 
+  const updateTaskChecklist = async (
+    taskId: string,
+    next: { text: string; done: boolean }[]
+  ) => {
+    try {
+      const record = await pb.collection("tasks").update(taskId, { checklist: next });
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === taskId ? { ...t, checklist: record.checklist || next } : t
+        )
+      );
+      setViewTask((v) =>
+        v && v.id === taskId ? ({ ...v, checklist: record.checklist || next } as Task) : v
+      );
+    } catch (error) {
+      console.error("Failed to update checklist", error);
+    }
+  };
+
+  const canDeleteTask = (task: Task) => {
+    const model = pb.authStore.model as any;
+    const role = model?.role as string | undefined;
+    const uid = model?.id as string | undefined;
+    return role === "admin" || (!!task.created_by && task.created_by === uid);
+  };
+
   return (
     <div className="flex flex-col h-screen">
       <Topbar title="Kanban Board" subtitle="Drag tasks between columns to update status" />
       <div className="flex-1 overflow-x-auto p-6">
-        <div className="flex gap-4 h-full min-w-max">
+        <div className="relative flex gap-4 h-full min-w-max">
+          {isLoadingTasks && tasks.length === 0 && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-white/5 border border-white/10 text-xs text-[var(--text-secondary)]">
+                <Loader2 size={14} className="animate-spin text-[var(--accent)]" />
+                <span>Memuat tasks...</span>
+              </div>
+            </div>
+          )}
           {COLUMNS.map((col) => {
             const colTasks = getColumnTasks(col.id);
             const isDragTarget = dragOver === col.id;
@@ -499,6 +621,11 @@ export default function KanbanPage() {
                           <p className="text-sm font-medium leading-tight truncate">
                             {task.title}
                           </p>
+                          {task.description && (
+                            <p className="text-[11px] text-[var(--text-secondary)] mt-0.5 line-clamp-2">
+                              {task.description}
+                            </p>
+                          )}
                         </div>
                         <button
                           className="opacity-0 group-hover:opacity-100 transition-opacity text-[var(--text-muted)] hover:text-[var(--text-primary)]"
@@ -538,6 +665,57 @@ export default function KanbanPage() {
                           </span>
                         )}
                       </div>
+
+                      {Array.isArray(task.checklist) && task.checklist.length > 0 && (
+                        <div className="mb-3">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[10px] text-[var(--text-muted)]">
+                              Checklist
+                            </span>
+                            <span className="text-[10px] text-[var(--text-muted)]">
+                              {task.checklist.filter((i) => i.done).length}/{task.checklist.length}
+                            </span>
+                          </div>
+                          <div className="space-y-1">
+                            {task.checklist.slice(0, 3).map((item, idx) => (
+                              <button
+                                key={idx}
+                                className={`w-full text-left text-[11px] px-2 py-1 rounded border ${
+                                  item.done
+                                    ? "bg-[var(--accent-dim)] border-[var(--accent-border)] text-[var(--text-primary)]"
+                                    : "border-[var(--border)] text-[var(--text-secondary)]"
+                                }`}
+                                onClick={async () => {
+                                  const next =
+                                    (task.checklist || []).map((it, i) =>
+                                      i === idx ? { ...it, done: !it.done } : it
+                                    );
+                                  try {
+                                    const record = await pb
+                                      .collection("tasks")
+                                      .update(task.id, { checklist: next });
+                                    setTasks((prev) =>
+                                      prev.map((t) =>
+                                        t.id === task.id ? { ...t, checklist: record.checklist || next } : t
+                                      )
+                                    );
+                                  } catch (error) {
+                                    console.error("Failed to toggle checklist item", error);
+                                  }
+                                }}
+                              >
+                                {item.done ? "✔ " : "○ "}
+                                {item.text}
+                              </button>
+                            ))}
+                            {task.checklist.length > 3 && (
+                              <div className="text-[10px] text-[var(--text-muted)]">
+                                +{task.checklist.length - 3} lainnya
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
 
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1">
@@ -623,6 +801,83 @@ export default function KanbanPage() {
                   onChange={(e) => setFormDescription(e.target.value)}
                 />
               </div>
+              {formMode === "edit" && (
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-[var(--text-secondary)]">
+                    Checklist
+                  </label>
+                  {formChecklist.length > 0 && (
+                    <div className="space-y-1">
+                      {formChecklist.map((item, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            className={`px-2 py-1 rounded border text-[11px] ${
+                              item.done
+                                ? "bg-[var(--accent-dim)] border-[var(--accent-border)]"
+                                : "border-[var(--border)]"
+                            }`}
+                            onClick={() => {
+                              setFormChecklist((prev) =>
+                                prev.map((it, i) =>
+                                  i === idx ? { ...it, done: !it.done } : it
+                                )
+                              );
+                            }}
+                          >
+                            {item.done ? "✔" : "○"}
+                          </button>
+                          <input
+                            className="flex-1 px-2 py-1 rounded bg-[var(--surface-2)] border border-[var(--border)] text-[11px] outline-none"
+                            value={item.text}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setFormChecklist((prev) =>
+                                prev.map((it, i) =>
+                                  i === idx ? { ...it, text: val } : it
+                                )
+                              );
+                            }}
+                          />
+                          <button
+                            type="button"
+                            className="px-2 py-1 rounded bg-red-500/10 text-red-400 text-[11px]"
+                            onClick={() => {
+                              setFormChecklist((prev) =>
+                                prev.filter((_, i) => i !== idx)
+                              );
+                            }}
+                          >
+                            Hapus
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="mt-1 flex items-center gap-2">
+                    <input
+                      type="text"
+                      className="flex-1 px-2 py-1 rounded bg-[var(--surface-2)] border border-[var(--border)] text-[11px] outline-none"
+                      placeholder="Tambah checklist..."
+                      value={formChecklistText}
+                      onChange={(e) => setFormChecklistText(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className="px-2 py-1 rounded bg-[var(--accent)] text-black text-[11px]"
+                      onClick={() => {
+                        const val = formChecklistText.trim();
+                        if (!val) return;
+                        setFormChecklist((prev) => [...prev, { text: val, done: false }]);
+                        setFormChecklistText("");
+                      }}
+                      disabled={!formChecklistText.trim()}
+                    >
+                      Tambah
+                    </button>
+                  </div>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-[var(--text-secondary)]">
@@ -823,6 +1078,133 @@ export default function KanbanPage() {
                   <p className="whitespace-pre-wrap">{viewTask.description}</p>
                 </div>
               )}
+              <div>
+                <p className="text-xs text-[var(--text-muted)] mb-0.5">Checklist</p>
+                {Array.isArray(viewTask.checklist) && viewTask.checklist.length > 0 ? (
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-[var(--text-muted)]">
+                        Progress
+                      </span>
+                      <span className="text-[10px] text-[var(--text-muted)]">
+                        {viewTask.checklist.filter((i) => i.done).length}/{viewTask.checklist.length}
+                      </span>
+                    </div>
+                    {viewTask.checklist.map((item, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <button
+                          className={`px-2 py-1 rounded border text-[11px] ${
+                            item.done
+                              ? "bg-[var(--accent-dim)] border-[var(--accent-border)]"
+                              : "border-[var(--border)]"
+                          }`}
+                          onClick={async () => {
+                            const next = (viewTask.checklist || []).map((it, i) =>
+                              i === idx ? { ...it, done: !it.done } : it
+                            );
+                            await updateTaskChecklist(viewTask.id, next);
+                          }}
+                        >
+                          {item.done ? "✔" : "○"}
+                        </button>
+                        {editingChecklistIndex === idx ? (
+                          <>
+                            <input
+                              className="flex-1 px-2 py-1 rounded bg-[var(--surface-2)] border border-[var(--border)] text-[11px] outline-none"
+                              value={editingChecklistText}
+                              onChange={(e) => setEditingChecklistText(e.target.value)}
+                            />
+                            <button
+                              className="px-2 py-1 rounded bg-[var(--accent)] text-black text-[11px]"
+                              onClick={async () => {
+                                const val = editingChecklistText.trim();
+                                if (!val) return;
+                                const next = (viewTask.checklist || []).map((it, i) =>
+                                  i === idx ? { ...it, text: val } : it
+                                );
+                                await updateTaskChecklist(viewTask.id, next);
+                                setEditingChecklistIndex(null);
+                                setEditingChecklistText("");
+                              }}
+                            >
+                              Save
+                            </button>
+                            <button
+                              className="px-2 py-1 rounded border border-[var(--border)] text-[11px]"
+                              onClick={() => {
+                                setEditingChecklistIndex(null);
+                                setEditingChecklistText("");
+                              }}
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <span className="flex-1 text-[12px]">
+                              {item.text}
+                            </span>
+                            <button
+                              className="px-2 py-1 rounded border border-[var(--border)] text-[11px]"
+                              onClick={() => {
+                                setEditingChecklistIndex(idx);
+                                setEditingChecklistText(item.text);
+                              }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              className="px-2 py-1 rounded bg-red-500/10 text-red-400 text-[11px]"
+                              onClick={async () => {
+                                const next = (viewTask.checklist || []).filter((_, i) => i !== idx);
+                                await updateTaskChecklist(viewTask.id, next);
+                              }}
+                            >
+                              Hapus
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-[var(--text-muted)]">Belum ada checklist</p>
+                )}
+                <div className="mt-2 flex items-center gap-2">
+                  <input
+                    type="text"
+                    className="flex-1 px-2 py-1 rounded bg-[var(--surface-2)] border border-[var(--border)] text-[11px] outline-none"
+                    placeholder="Tambah checklist..."
+                    value={newChecklistText}
+                    onChange={(e) => setNewChecklistText(e.target.value)}
+                  />
+                  <button
+                    className="px-2 py-1 rounded bg-[var(--accent)] text-black text-[11px]"
+                    onClick={async () => {
+                      if (newChecklistLoading) return;
+                      const val = newChecklistText.trim();
+                      if (!val) return;
+                      const next = [...(viewTask.checklist || []), { text: val, done: false }];
+                      try {
+                        setNewChecklistLoading(true);
+                        await updateTaskChecklist(viewTask.id, next);
+                        setNewChecklistText("");
+                      } finally {
+                        setNewChecklistLoading(false);
+                      }
+                    }}
+                    disabled={newChecklistLoading || !newChecklistText.trim()}
+                  >
+                    {newChecklistLoading ? (
+                      <span className="inline-flex items-center gap-1">
+                        <Loader2 size={12} className="animate-spin" /> Menambah...
+                      </span>
+                    ) : (
+                      "Tambah"
+                    )}
+                  </button>
+                </div>
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <p className="text-xs text-[var(--text-muted)] mb-0.5">Status</p>
@@ -940,6 +1322,14 @@ export default function KanbanPage() {
               >
                 Edit task
               </button>
+              {canDeleteTask(optionsTask) && (
+                <button
+                  className="w-full text-left px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20"
+                  onClick={() => openDeleteConfirm(optionsTask)}
+                >
+                  Delete task
+                </button>
+              )}
             </div>
             <div className="flex justify-end pt-3">
               <button
@@ -948,6 +1338,44 @@ export default function KanbanPage() {
                 onClick={() => setOptionsTask(null)}
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {deleteTask && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="card w-full max-w-sm p-5">
+            <h2 className="text-sm font-semibold mb-2">Hapus task?</h2>
+            <p className="text-xs text-[var(--text-muted)] mb-4">
+              Task "{deleteTask.title}" akan dihapus dari board dan PocketBase. Tindakan ini tidak bisa dibatalkan.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                className="px-3 py-1.5 text-xs rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-white/5 disabled:opacity-50"
+                onClick={() => !isDeleting && setDeleteTask(null)}
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="px-3 py-1.5 text-xs rounded-lg bg-red-500 text-white font-semibold hover:bg-red-600 disabled:opacity-50 inline-flex items-center gap-1.5"
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 size={12} className="animate-spin" />
+                    Menghapus...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={12} />
+                    Hapus
+                  </>
+                )}
               </button>
             </div>
           </div>

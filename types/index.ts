@@ -21,6 +21,7 @@ export interface Task {
   id: string;
   title: string;
   description?: string;
+  checklist?: { text: string; done: boolean }[];
   status: TaskStatus;
   priority: TaskPriority;
   type?: TaskType;

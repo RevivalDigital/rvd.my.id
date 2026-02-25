@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import PocketBase from "pocketbase";
 import Topbar from "@/components/Topbar";
+import LoadingOverlay from "@/components/LoadingOverlay";
 import { Globe, RefreshCw, AlertTriangle, CheckCircle, Clock, Zap, TrendingUp, Edit2, Trash2 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import type { SiteHealth } from "@/types";
@@ -243,6 +244,9 @@ export default function SiteHealthPage() {
     <div>
       <Topbar title="Site Health" subtitle="Uptime monitoring & performance scores" />
       <div className="p-6 space-y-6">
+        {isLoading && (
+          <LoadingOverlay label="Memuat data site health..." />
+        )}
         <div className="flex items-center justify-between">
           <p className="text-xs text-[var(--text-muted)]">
             {totalSites > 0 ? `${totalSites} site dimonitor` : "Belum ada site yang dimonitor"}

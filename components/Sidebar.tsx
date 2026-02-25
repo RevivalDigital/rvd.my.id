@@ -7,7 +7,7 @@ import PocketBase from "pocketbase";
 import {
   LayoutDashboard, Kanban, Calendar, MessageSquare, FolderOpen,
   Globe, GitBranch, Instagram, Bell, Settings, LogOut,
-  ChevronLeft, ChevronRight, Users, Zap
+  ChevronLeft, ChevronRight, Users, Zap, PenLine
 } from "lucide-react";
 
 const pbBaseUrl =
@@ -23,6 +23,7 @@ const navItems = [
   { label: "Calendar", href: "/dashboard/calendar", icon: Calendar },
   { label: "Team Chat", href: "/dashboard/chat", icon: MessageSquare },
   { label: "Files", href: "/dashboard/files", icon: FolderOpen },
+  { label: "Whiteboard", href: "/dashboard/whiteboard", icon: PenLine },
 ];
 
 const devItems = [

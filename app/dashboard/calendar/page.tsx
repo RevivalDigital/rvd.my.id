@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Topbar from "@/components/Topbar";
+import LoadingOverlay from "@/components/LoadingOverlay";
 import { ChevronLeft, ChevronRight, Plus, Clock } from "lucide-react";
 import PocketBase from "pocketbase";
-import type { CalendarEvent } from "@/types";
+import type { CalendarEvent, Task } from "@/types";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = [
@@ -61,6 +62,7 @@ export default function CalendarPage() {
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [taskRecords, setTaskRecords] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
@@ -116,7 +118,45 @@ export default function CalendarPage() {
       }
     }
 
+    async function loadTasks() {
+      try {
+        const monthStart = new Date(year, month, 1);
+        const monthEnd = new Date(year, month + 1, 0, 23, 59, 59);
+
+        const records = await pb.collection("tasks").getFullList({
+          sort: "due_date",
+          filter: `due_date >= "${monthStart.toISOString()}" && due_date <= "${monthEnd.toISOString()}"`,
+        });
+
+        if (cancelled) return;
+
+        const mapped: Task[] = records.map((r: any) => ({
+          id: r.id,
+          title: r.title,
+          description: r.description,
+          status: r.status,
+          priority: r.priority,
+          type: r.type,
+          project: r.project,
+          assignee: r.assignee,
+          assignees: r.assignees,
+          created_by: r.created_by,
+          due_date: r.due_date,
+          sort_order: r.sort_order,
+          tags: r.tags || [],
+          attachments: r.attachments || [],
+          created: r.created,
+          updated: r.updated,
+        }));
+
+        setTaskRecords(mapped);
+      } catch (error) {
+        console.error("Failed to load tasks from PocketBase", error);
+      }
+    }
+
     loadEvents();
+    loadTasks();
 
     return () => {
       cancelled = true;
@@ -178,11 +218,40 @@ export default function CalendarPage() {
   const today = now.getDate();
   const isCurrentMonth = now.getFullYear() === year && now.getMonth() === month;
 
+  const taskEvents = useMemo(() => {
+    return taskRecords
+      .filter((task) => task.due_date)
+      .map((task) => ({
+        id: `task-${task.id}`,
+        title: task.title,
+        description: task.description,
+        type: "deadline" as CalendarEvent["type"],
+        start_at: task.due_date as string,
+        end_at: task.due_date,
+        all_day: true,
+        color: typeDefaultColor.deadline,
+        created: task.created,
+        updated: task.updated,
+        created_by: task.created_by,
+        source: "task" as const,
+        task_id: task.id,
+      }));
+  }, [taskRecords]);
+
+  const calendarEvents = useMemo(() => {
+    return events.map((ev) => ({ ...ev, source: "event" as const }));
+  }, [events]);
+
+  const combinedEvents = useMemo(
+    () => [...calendarEvents, ...taskEvents],
+    [calendarEvents, taskEvents]
+  );
+
   const getEventsForDay = (day: number) => {
     const targetDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(
       day
     ).padStart(2, "0")}`;
-    return events.filter((e) => e.start_at.startsWith(targetDate));
+    return combinedEvents.filter((e) => e.start_at.startsWith(targetDate));
   };
 
   const prevMonth = () => {
@@ -193,15 +262,12 @@ export default function CalendarPage() {
   };
 
   const upcomingEvents = useMemo(() => {
-    const monthStart = new Date(year, month, 1);
-    return events
-      .filter((e) => {
-        const d = new Date(e.start_at);
-        return d >= monthStart;
-      })
+    const nowTime = new Date().getTime();
+    return combinedEvents
+      .filter((e) => new Date(e.start_at).getTime() >= nowTime)
       .sort((a, b) => a.start_at.localeCompare(b.start_at))
       .slice(0, 6);
-  }, [events, year, month]);
+  }, [combinedEvents]);
 
   const openCreateForm = () => {
     const defaultDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(
@@ -332,6 +398,7 @@ export default function CalendarPage() {
     <div>
       <Topbar title="Shared Calendar" subtitle="Jadwal rilis, meeting, dan konten media sosial" />
       <div className="p-6">
+        {isLoading && <LoadingOverlay label="Memuat event kalender..." />}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           {/* Calendar Grid */}
           <div className="xl:col-span-2 card p-5">
@@ -392,7 +459,11 @@ export default function CalendarPage() {
                         <button
                           key={ev.id}
                           type="button"
-                          onClick={() => openEditForm(ev)}
+                          onClick={() => {
+                            if (ev.source === "event") {
+                              openEditForm(ev);
+                            }
+                          }}
                           className="w-full text-left text-[9px] leading-tight px-1 py-0.5 rounded truncate font-medium"
                           style={{ background: `${ev.color}20`, color: ev.color }}
                         >
@@ -428,7 +499,11 @@ export default function CalendarPage() {
                   <button
                     key={ev.id}
                     type="button"
-                    onClick={() => openEditForm(ev)}
+                    onClick={() => {
+                      if (ev.source === "event") {
+                        openEditForm(ev);
+                      }
+                    }}
                     className="w-full flex items-start gap-3 p-3 rounded-lg bg-[var(--surface-2)] hover:bg-white/5 transition-colors text-left"
                   >
                     <div

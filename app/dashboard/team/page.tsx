@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Topbar from "@/components/Topbar";
+import LoadingOverlay from "@/components/LoadingOverlay";
 import PocketBase from "pocketbase";
 import { Shield, User, Mail, Clock, Lock, Plus, Edit2 } from "lucide-react";
 import type { User as DashboardUser } from "@/types";
@@ -209,11 +210,9 @@ export default function TeamPage() {
           </div>
         </div>
 
-        {isLoading ? (
-          <div className="flex items-center justify-center h-40 text-sm text-[var(--text-muted)]">
-            Loading team members...
-          </div>
-        ) : (
+        {isLoading && <LoadingOverlay label="Memuat data member tim..." />}
+
+        {!isLoading && (
           <div className="border border-[var(--border)] rounded-xl overflow-hidden bg-[var(--surface-2)]">
             <div className="grid grid-cols-[2fr,1.2fr,1.6fr,1.2fr,0.8fr] gap-4 px-4 py-2 text-[11px] text-[var(--text-muted)] border-b border-[var(--border)] bg-black/20">
               <div>Member</div>

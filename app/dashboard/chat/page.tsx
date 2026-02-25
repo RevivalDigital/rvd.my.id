@@ -29,6 +29,21 @@ const CHANNELS = [
   { id: "random", label: "random" },
 ];
 
+const CHANNEL_ACCESS: Record<string, string[]> = {
+  general: ["admin", "developer", "social_media_manager", "viewer"],
+  dev: ["admin", "developer"],
+  social: ["admin", "developer", "social_media_manager"],
+  design: ["admin", "developer", "social_media_manager"],
+  urgent: ["admin", "developer", "social_media_manager"],
+  random: ["admin", "developer", "social_media_manager", "viewer"],
+};
+
+function canAccessChannel(channelId: string, role?: string) {
+  const allowed = CHANNEL_ACCESS[channelId] || [];
+  if (!role) return allowed.length > 0;
+  return allowed.includes(role);
+}
+
 type ChatMessage = {
   id: string;
   senderId: string | null;
@@ -111,6 +126,14 @@ export default function ChatPage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activeChannel, messages]);
+
+  useEffect(() => {
+    const role = (pb.authStore.model as any)?.role as string | undefined;
+    const visible = CHANNELS.filter((ch) => canAccessChannel(ch.id, role));
+    if (!visible.find((ch) => ch.id === activeChannel)) {
+      if (visible.length > 0) setActiveChannel(visible[0].id);
+    }
+  }, [activeChannel]);
 
   useEffect(() => {
     let cancelled = false;
@@ -605,6 +628,8 @@ export default function ChatPage() {
     setInput("");
 
     try {
+      const role = (pb.authStore.model as any)?.role as string | undefined;
+      if (!canAccessChannel(activeChannel, role)) return;
       const authModel = pb.authStore.model as any;
       const data: any = {
         body: text,
@@ -682,6 +707,14 @@ export default function ChatPage() {
     (pb.authStore.model as any)?.id !== undefined
       ? ((pb.authStore.model as any).id as string)
       : undefined;
+  const authRole =
+    (pb.authStore.model as any)?.role !== undefined
+      ? ((pb.authStore.model as any).role as string)
+      : undefined;
+  const visibleChannels = CHANNELS.filter((ch) =>
+    canAccessChannel(ch.id, authRole)
+  );
+  const canPost = canAccessChannel(activeChannel, authRole);
   const typingForChannel = typingUsers[activeChannel] || [];
   const now = Date.now();
   const visibleTyping = typingForChannel.filter((t) => now - t.updated < 7000);
@@ -695,7 +728,7 @@ export default function ChatPage() {
           <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] px-4 mb-2">
             Channels
           </p>
-          {CHANNELS.map((ch) => (
+          {visibleChannels.map((ch) => (
             <button
               key={ch.id}
               onClick={() => setActiveChannel(ch.id)}
@@ -1065,13 +1098,14 @@ export default function ChatPage() {
                 onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && send()}
                 placeholder={`Message #${activeChannel}`}
                 className="flex-1 bg-transparent outline-none text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+                disabled={!canPost}
               />
               <button className="text-[var(--text-muted)] hover:text-[var(--text-primary)]">
                 <Smile size={16} />
               </button>
               <button
                 onClick={send}
-                disabled={!input.trim()}
+                disabled={!input.trim() || !canPost}
                 className="w-7 h-7 bg-[var(--accent)] rounded-lg flex items-center justify-center text-black hover:opacity-90 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 <Send size={13} />

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, LogIn } from "lucide-react";
+import { Eye, EyeOff, LogIn, Loader2 } from "lucide-react";
 import PocketBase from "pocketbase";
 
 const pbBaseUrl =
@@ -95,7 +95,11 @@ export default function LoginPage() {
               className="w-full flex items-center justify-center gap-2 py-3 bg-[#00f5a0] text-black font-bold rounded-xl hover:opacity-90 transition-opacity mt-2 disabled:opacity-60"
               style={{ boxShadow: "0 0 20px rgba(0,245,160,0.2)" }}
             >
-              <LogIn size={16} />
+              {loading ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <LogIn size={16} />
+              )}
               {loading ? "Signing in..." : "Sign In"}
             </button>
           </form>
