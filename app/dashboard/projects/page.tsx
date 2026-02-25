@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Topbar from "@/components/Topbar";
+import LoadingOverlay from "@/components/LoadingOverlay";
 import { Plus, MoreHorizontal, Users, Calendar, Tag as TagIcon, Trash2, Edit2, Circle } from "lucide-react";
 import type { Project, User } from "@/types";
 import PocketBase from "pocketbase";
@@ -301,6 +302,10 @@ export default function ProjectsPage() {
             />
           </div>
         </div>
+
+        {isLoading && (
+          <LoadingOverlay label="Memuat daftar project..." />
+        )}
 
         <div className="card overflow-hidden">
           <div className="min-w-full overflow-x-auto">

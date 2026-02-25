@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import type { SiteHealth, Task, CalendarEvent } from "@/types";
+import LoadingOverlay from "@/components/LoadingOverlay";
 
 const pbBaseUrl =
   process.env.NEXT_PUBLIC_POCKETBASE_URL ||
@@ -68,13 +69,6 @@ type WidgetSite = {
   };
 };
 
-const upcomingEvents: Partial<CalendarEvent & { date?: string }>[] = [
-  { id: "ev1", title: "Feature Release: Auth v2", type: "feature_release", date: "Today, 5 PM", color: "#00f5a0" },
-  { id: "ev2", title: "IG Post: Monday Motivation", type: "social_post", date: "Tomorrow, 9 AM", color: "#1890ff" },
-  { id: "ev3", title: "Sprint Review Meeting", type: "meeting", date: "Wed, 2 PM", color: "#faad14" },
-  { id: "ev4", title: "LinkedIn Article Publish", type: "social_post", date: "Thu, 10 AM", color: "#1890ff" },
-];
-
 const statusColors: Record<string, string> = {
   todo: "bg-[var(--text-muted)]/20 text-[var(--text-secondary)]",
   in_progress: "bg-blue-500/20 text-blue-400",
@@ -101,6 +95,7 @@ export default function DashboardPage() {
   const [siteRecords, setSiteRecords] = useState<SiteHealth[]>([]);
   const [taskRecords, setTaskRecords] = useState<Task[]>([]);
   const [eventRecords, setEventRecords] = useState<CalendarEvent[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const userName = pb.authStore.model?.name || pb.authStore.model?.username || "User";
 
@@ -146,13 +141,20 @@ export default function DashboardPage() {
       }
     };
 
-    loadSites();
-    loadTasks();
-    loadEvents();
+    const loadAll = async () => {
+      try {
+        setIsLoading(true);
+        await Promise.all([loadSites(), loadTasks(), loadEvents()]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadAll();
   }, []);
 
   const displayTasks = (taskRecords.length > 0 ? taskRecords : tasks) as any[];
-  const displayEvents = (eventRecords.length > 0 ? eventRecords : upcomingEvents) as any[];
+  const displayEvents = eventRecords;
 
   const widgetSites: WidgetSite[] = useMemo(() => {
     const mapped = siteRecords.map((record) => {
@@ -184,6 +186,7 @@ export default function DashboardPage() {
       <Topbar title="Overview" subtitle={`${greeting}, ${userName} 👋`} />
 
       <div className="p-6 space-y-6">
+        {isLoading && <LoadingOverlay label="Memuat data dashboard..." />}
         {/* Stats Row */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
@@ -281,21 +284,27 @@ export default function DashboardPage() {
             </div>
             <div className="space-y-3">
               {displayEvents.slice(0, 4).map((ev) => {
-                const eventDate = "start_at" in ev 
-                  ? new Date(ev.start_at).toLocaleDateString("en-US", {
-                      weekday: "short",
-                      month: "short",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
-                  : ev.date;
+                const eventDate = new Date(ev.start_at).toLocaleDateString("id-ID", {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                });
 
                 return (
-                  <div key={ev.id || ev.title} className="flex items-start gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors group">
-                    <div className="w-1 h-8 rounded-full flex-shrink-0" style={{ background: ev.color || "var(--accent)" }} />
+                  <div
+                    key={ev.id}
+                    className="flex items-start gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors group"
+                  >
+                    <div
+                      className="w-1 h-8 rounded-full flex-shrink-0"
+                      style={{ background: ev.color || "var(--accent)" }}
+                    />
                     <div className="min-w-0">
-                      <p className="text-sm font-medium leading-tight truncate group-hover:text-[var(--accent)] transition-colors">{ev.title}</p>
+                      <p className="text-sm font-medium leading-tight truncate group-hover:text-[var(--accent)] transition-colors">
+                        {ev.title}
+                      </p>
                       <p className="text-[10px] text-[var(--text-muted)] flex items-center gap-1 mt-1">
                         <Clock size={10} /> {eventDate}
                       </p>

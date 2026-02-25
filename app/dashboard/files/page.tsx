@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Topbar from "@/components/Topbar";
+import LoadingOverlay from "@/components/LoadingOverlay";
 import {
   FileText,
   Image,
@@ -288,6 +289,7 @@ export default function FilesPage() {
     <div>
       <Topbar title="File Storage" subtitle="Aset desain, dokumen teknis & media" />
       <div className="p-6 space-y-5">
+        {isLoading && <LoadingOverlay label="Memuat daftar file..." />}
         {/* Controls */}
         <div className="flex items-center gap-3 flex-wrap">
           <div className="flex items-center gap-2 px-3 py-2 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-sm flex-1 min-w-48 focus-within:border-[var(--accent-border)] transition-colors">

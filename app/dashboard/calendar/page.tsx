@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Topbar from "@/components/Topbar";
+import LoadingOverlay from "@/components/LoadingOverlay";
 import { ChevronLeft, ChevronRight, Plus, Clock } from "lucide-react";
 import PocketBase from "pocketbase";
 import type { CalendarEvent, Task } from "@/types";
@@ -397,6 +398,7 @@ export default function CalendarPage() {
     <div>
       <Topbar title="Shared Calendar" subtitle="Jadwal rilis, meeting, dan konten media sosial" />
       <div className="p-6">
+        {isLoading && <LoadingOverlay label="Memuat event kalender..." />}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           {/* Calendar Grid */}
           <div className="xl:col-span-2 card p-5">
