@@ -73,6 +73,7 @@ export default function KanbanPage() {
   const [newChecklistText, setNewChecklistText] = useState("");
   const [editingChecklistIndex, setEditingChecklistIndex] = useState<number | null>(null);
   const [editingChecklistText, setEditingChecklistText] = useState("");
+  const [newChecklistLoading, setNewChecklistLoading] = useState(false);
 
   const authModel = pb.authStore.model as any;
 
@@ -807,6 +808,7 @@ export default function KanbanPage() {
                         setFormChecklist((prev) => [...prev, { text: val, done: false }]);
                         setFormChecklistText("");
                       }}
+                      disabled={!formChecklistText.trim()}
                     >
                       Tambah
                     </button>
@@ -1116,14 +1118,27 @@ export default function KanbanPage() {
                   <button
                     className="px-2 py-1 rounded bg-[var(--accent)] text-black text-[11px]"
                     onClick={async () => {
+                      if (newChecklistLoading) return;
                       const val = newChecklistText.trim();
                       if (!val) return;
                       const next = [...(viewTask.checklist || []), { text: val, done: false }];
-                      await updateTaskChecklist(viewTask.id, next);
-                      setNewChecklistText("");
+                      try {
+                        setNewChecklistLoading(true);
+                        await updateTaskChecklist(viewTask.id, next);
+                        setNewChecklistText("");
+                      } finally {
+                        setNewChecklistLoading(false);
+                      }
                     }}
+                    disabled={newChecklistLoading || !newChecklistText.trim()}
                   >
-                    Tambah
+                    {newChecklistLoading ? (
+                      <span className="inline-flex items-center gap-1">
+                        <Loader2 size={12} className="animate-spin" /> Menambah...
+                      </span>
+                    ) : (
+                      "Tambah"
+                    )}
                   </button>
                 </div>
               </div>
