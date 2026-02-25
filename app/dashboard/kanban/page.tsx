@@ -13,18 +13,6 @@ const COLUMNS: { id: TaskStatus; label: string; color: string }[] = [
   { id: "done", label: "Done", color: "var(--accent)" },
 ];
 
-const INITIAL_TASKS: Task[] = [
-  { id: "t1", title: "Implement OAuth2 with PocketBase", status: "in_progress", priority: "high", type: "feature", assignee: "Alex", created: "", updated: "" },
-  { id: "t2", title: "Fix mobile nav hamburger", status: "done", priority: "medium", type: "bug", assignee: "Alex", created: "", updated: "" },
-  { id: "t3", title: "Design landing page v2 hero section", status: "review", priority: "medium", type: "design", assignee: "Rina", created: "", updated: "" },
-  { id: "t4", title: "Schedule IG posts for this week", status: "todo", priority: "urgent", type: "content", assignee: "Dito", created: "", updated: "" },
-  { id: "t5", title: "Improve Lighthouse score to 95+", status: "in_progress", priority: "high", type: "devops", assignee: "Alex", created: "", updated: "" },
-  { id: "t6", title: "Write blog post about Next.js 16", status: "todo", priority: "medium", type: "content", assignee: "Rina", created: "", updated: "" },
-  { id: "t7", title: "Setup PocketBase collections", status: "done", priority: "high", type: "feature", assignee: "Alex", created: "", updated: "" },
-  { id: "t8", title: "Create LinkedIn content calendar", status: "todo", priority: "low", type: "content", assignee: "Dito", created: "", updated: "" },
-  { id: "t9", title: "Code review: auth module PR", status: "review", priority: "high", type: "feature", assignee: "Rina", created: "", updated: "" },
-];
-
 const priorityStyles: Record<string, string> = {
   low: "bg-white/5 text-[var(--text-muted)]",
   medium: "bg-white/10 text-[var(--text-secondary)]",
@@ -55,7 +43,7 @@ const pb = new PocketBase(pbBaseUrl);
 pb.autoCancellation(false);
 
 export default function KanbanPage() {
-  const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [dragging, setDragging] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState<TaskStatus | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -286,6 +274,22 @@ export default function KanbanPage() {
     if (isSubmitting) return;
     setIsFormOpen(false);
     setEditingTask(null);
+  };
+
+  const handleDeleteTask = async (task: Task) => {
+    const confirmed = window.confirm(`Hapus task "${task.title}"?`);
+    if (!confirmed) return;
+    try {
+      await pb.collection("tasks").delete(task.id);
+      setTasks((prev) => prev.filter((t) => t.id !== task.id));
+      if (viewTask && viewTask.id === task.id) {
+        setViewTask(null);
+      }
+    } catch (error) {
+      console.error("Failed to delete task", error);
+    } finally {
+      setOptionsTask(null);
+    }
   };
 
   const handleFormSubmit = async (e: any) => {
@@ -939,6 +943,12 @@ export default function KanbanPage() {
                 }}
               >
                 Edit task
+              </button>
+              <button
+                className="w-full text-left px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20"
+                onClick={() => handleDeleteTask(optionsTask)}
+              >
+                Delete task
               </button>
             </div>
             <div className="flex justify-end pt-3">
