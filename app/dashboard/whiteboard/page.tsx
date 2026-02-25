@@ -6,7 +6,8 @@ import {
   Pencil, Square, Circle, Minus, ArrowRight, Type, Hand,
   Eraser, Trash2, Download, Undo, Redo, ZoomIn, ZoomOut,
   Users, Diamond, StickyNote, MousePointer2, ImagePlus,
-  Save, FolderOpen, CheckCircle2,
+  Save, FolderOpen, CheckCircle2, UserPlus, Link2, X,
+  Copy, Mail,
 } from "lucide-react";
 
 // ─── Rough drawing helpers ────────────────────────────────────────────────────
@@ -162,6 +163,13 @@ export default function WhiteboardPage() {
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [saveStatus, setSaveStatus] = useState<"idle" | "saved">("idle");
   const [cursorOverride, setCursorOverride] = useState<string | null>(null);
+  const [showInvite, setShowInvite] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteSent, setInviteSent] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [collaborators] = useState([
+    { name: "You", color: "#00f5a0", initials: "YO" },
+  ]);
 
   // Text editing
   const [textActive, setTextActive] = useState(false);
@@ -766,6 +774,20 @@ export default function WhiteboardPage() {
       return () => window.removeEventListener("keydown", handler);
   }, [textActive, undo, redo, saveBoard, deleteSelected, selectedId]);
 
+  // ── Invite / Share ────────────────────────────────────────────────────────────
+  const handleSendInvite = useCallback(() => {
+    if (!inviteEmail.trim()) return;
+    setInviteSent(true);
+    setInviteEmail("");
+    setTimeout(() => setInviteSent(false), 3000);
+  }, [inviteEmail]);
+
+  const handleCopyLink = useCallback(() => {
+    navigator.clipboard.writeText(window.location.href).catch(() => {});
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+  }, []);
+
   // ── Tool list ─────────────────────────────────────────────────────────────────
   const toolButtons: { id: Tool; icon: React.ComponentType<{ size?: number }>; label: string }[] = [
     { id: "select", icon: MousePointer2, label: "Select (V)" },
@@ -791,6 +813,10 @@ export default function WhiteboardPage() {
   const cursor = cursorOverride || defaultCursor;
 
   // ── Render ────────────────────────────────────────────────────────────────────
+
+  // Top-bar height in px — used to align all floating elements
+  const TOP_Y = 16;
+
   return (
     <div className="flex flex-col h-screen overflow-hidden">
     <Topbar title="Whiteboard" subtitle="Collaborative hand-drawn sketching" />
@@ -798,7 +824,7 @@ export default function WhiteboardPage() {
     <input ref={imageInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleImageFileChange} />
 
     <div className="flex flex-1 overflow-hidden relative">
-    {/* Canvas */}
+    {/* ════════════════ Canvas ════════════════ */}
     <canvas
     ref={canvasRef}
     className="flex-1 w-full h-full"
@@ -810,7 +836,7 @@ export default function WhiteboardPage() {
     onWheel={handleWheel}
     />
 
-    {/* ── Text overlay ── */}
+    {/* ════════════════ Text overlay ════════════════ */}
     {textActive && (
       <div style={{ position: "absolute", left: textScreenPos.x, top: textScreenPos.y, zIndex: 60, pointerEvents: "auto" }}>
       <textarea
@@ -824,8 +850,8 @@ export default function WhiteboardPage() {
       }}
       style={{
         background: textTool === "sticky" ? "rgba(250,173,20,0.18)" : "rgba(13,17,23,0.92)",
-                    border: "2px dashed var(--accent)",
-                    color: color, fontFamily: "'DM Mono', monospace",
+                    border: "2px dashed var(--accent)", color: color,
+                    fontFamily: "'DM Mono', monospace",
                     fontSize: textTool === "sticky" ? "14px" : "18px",
                     padding: "8px 12px", borderRadius: textTool === "sticky" ? "4px" : "6px",
                     minWidth: textTool === "sticky" ? "200px" : "140px",
@@ -834,7 +860,7 @@ export default function WhiteboardPage() {
       }}
       placeholder={textTool === "sticky" ? "Write note..." : "Type text..."}
       />
-      <div style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "4px", fontFamily: "monospace", background: "rgba(13,17,23,0.85)", padding: "2px 8px", borderRadius: 4 }}>
+      <div style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: 4, fontFamily: "monospace", background: "rgba(13,17,23,0.85)", padding: "2px 8px", borderRadius: 4 }}>
       {textTool === "text" ? "Enter = confirm • Shift+Enter = new line • Esc = cancel" : "Ctrl+Enter = confirm • Shift+Enter = new line • Esc = cancel"}
       </div>
       <button onClick={commitText} style={{ marginTop: 6, padding: "5px 16px", borderRadius: 6, background: "var(--accent)", color: "black", fontSize: 12, fontFamily: "monospace", fontWeight: 700, border: "none", cursor: "pointer", display: "block" }}>
@@ -843,15 +869,138 @@ export default function WhiteboardPage() {
       </div>
     )}
 
-    {/* ── Left: Tool palette ── */}
-    <div className="absolute left-4 top-1/2 -translate-y-1/2 flex flex-col gap-1 p-2 rounded-2xl"
-    style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "0 8px 40px rgba(0,0,0,0.5)", zIndex: 40 }}>
+    {/* ════════════════ TOP ROW — aligned at TOP_Y ════════════════ */}
+
+    {/* ── [LEFT] Collaborators badge ── */}
+    <div
+    style={{
+      position: "absolute", top: TOP_Y, left: 16, zIndex: 40,
+      display: "flex", alignItems: "center", gap: 8,
+      background: "var(--surface)", border: "1px solid var(--border)",
+          borderRadius: 99, padding: "5px 12px",
+          fontSize: 11, fontFamily: "monospace", color: "var(--text-secondary)",
+          boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+    }}
+    >
+    {/* Avatar stack */}
+    <div style={{ display: "flex", alignItems: "center" }}>
+    {collaborators.map((c, i) => (
+      <div key={i} title={c.name} style={{
+        width: 22, height: 22, borderRadius: "50%",
+        background: c.color, border: "2px solid var(--surface)",
+                                  marginLeft: i > 0 ? -6 : 0,
+                                  display: "flex", alignItems: "center", justifyContent: "center",
+                                  fontSize: 8, fontWeight: 700, color: "#000",
+      }}>{c.initials}</div>
+    ))}
+    </div>
+    <span style={{ color: "var(--text-secondary)" }}>
+    {collaborators.length} active
+    </span>
+    {saveStatus === "saved" && (
+      <span style={{ color: "var(--accent)", display: "flex", alignItems: "center", gap: 3 }}>
+      <CheckCircle2 size={11} /> Saved
+      </span>
+    )}
+
+    {/* Invite button inside badge */}
+    <button
+    onClick={() => setShowInvite(true)}
+    title="Invite collaborators"
+    style={{
+      display: "flex", alignItems: "center", gap: 5,
+      padding: "3px 10px", borderRadius: 99,
+      background: "var(--accent-dim)", border: "1px solid var(--accent-border)",
+          color: "var(--accent)", fontSize: 11, fontFamily: "monospace",
+          cursor: "pointer", fontWeight: 600, transition: "all 0.15s",
+    }}
+    >
+    <UserPlus size={12} /> Invite
+    </button>
+    </div>
+
+    {/* ── [CENTER] Action bar: Undo · Redo · | · Save · Load · | · Export PNG · Trash ── */}
+    <div
+    style={{
+      position: "absolute", top: TOP_Y, left: "50%", transform: "translateX(-50%)",
+          zIndex: 40, display: "flex", alignItems: "center", gap: 2,
+          background: "var(--surface)", border: "1px solid var(--border)",
+          borderRadius: 99, padding: "4px 8px",
+          boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+    }}
+    >
+    {/* Undo */}
+    <button title="Undo (Ctrl+Z)" onClick={undo} disabled={histIdx === 0}
+    style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, border: "none", background: "transparent", color: histIdx === 0 ? "var(--text-muted)" : "var(--text-secondary)", cursor: histIdx === 0 ? "not-allowed" : "pointer" }}
+    ><Undo size={14} /></button>
+
+    {/* Redo */}
+    <button title="Redo (Ctrl+Shift+Z)" onClick={redo} disabled={histIdx >= histLen - 1}
+    style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, border: "none", background: "transparent", color: histIdx >= histLen - 1 ? "var(--text-muted)" : "var(--text-secondary)", cursor: histIdx >= histLen - 1 ? "not-allowed" : "pointer" }}
+    ><Redo size={14} /></button>
+
+    <div style={{ width: 1, height: 20, background: "var(--border)", margin: "0 4px" }} />
+
+    {/* Save */}
+    <button title="Save to browser (Ctrl+S)" onClick={saveBoard}
+    style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, border: "none", background: saveStatus === "saved" ? "var(--accent-dim)" : "transparent", color: saveStatus === "saved" ? "var(--accent)" : "var(--text-secondary)", cursor: "pointer", transition: "all 0.3s" }}
+    >{saveStatus === "saved" ? <CheckCircle2 size={14} /> : <Save size={14} />}</button>
+
+    {/* Load */}
+    <button title="Load saved board" onClick={loadBoard}
+    style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, border: "none", background: "transparent", color: "var(--text-secondary)", cursor: "pointer" }}
+    ><FolderOpen size={14} /></button>
+
+    <div style={{ width: 1, height: 20, background: "var(--border)", margin: "0 4px" }} />
+
+    {/* Export PNG */}
+    <button title="Save as PNG" onClick={exportPNG}
+    style={{ height: 32, display: "flex", alignItems: "center", gap: 5, padding: "0 10px", borderRadius: 8, border: "none", background: "transparent", color: "var(--text-secondary)", cursor: "pointer", fontSize: 11, fontFamily: "monospace" }}
+    >
+    <Download size={14} />
+    <span style={{ fontSize: 10, color: "var(--text-muted)" }}>PNG</span>
+    </button>
+
+    <div style={{ width: 1, height: 20, background: "var(--border)", margin: "0 4px" }} />
+
+    {/* Clear all */}
+    <button title="Clear all" onClick={clearAll}
+    style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, border: "none", background: "transparent", color: "#ff4d4f", cursor: "pointer" }}
+    ><Trash2 size={14} /></button>
+    </div>
+
+    {/* ── [RIGHT] Zoom controls ── */}
+    <div
+    style={{
+      position: "absolute", top: TOP_Y, right: 16, zIndex: 40,
+      display: "flex", alignItems: "center", gap: 4,
+      background: "var(--surface)", border: "1px solid var(--border)",
+          borderRadius: 99, padding: "4px 10px",
+          boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+          fontSize: 11, fontFamily: "monospace",
+    }}
+    >
+    <button onClick={() => setZoom(z => Math.max(z * 0.8, 0.2))} style={{ width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--text-secondary)", cursor: "pointer" }}><ZoomOut size={11} /></button>
+    <span style={{ color: "var(--text-secondary)", minWidth: 38, textAlign: "center" }}>{Math.round(zoom * 100)}%</span>
+    <button onClick={() => setZoom(z => Math.min(z * 1.2, 5))} style={{ width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--text-secondary)", cursor: "pointer" }}><ZoomIn size={11} /></button>
+    <button onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }} style={{ fontSize: 10, color: "var(--text-muted)", background: "transparent", border: "none", cursor: "pointer", paddingLeft: 4 }}>Reset</button>
+    </div>
+
+    {/* ════════════════ LEFT: Tool palette — starts just below top bar ════════════════ */}
+    <div
+    style={{
+      position: "absolute", left: 16, top: TOP_Y + 44, zIndex: 40,
+      display: "flex", flexDirection: "column", gap: 2, padding: 6,
+      background: "var(--surface)", border: "1px solid var(--border)",
+          borderRadius: 16, boxShadow: "0 8px 40px rgba(0,0,0,0.4)",
+    }}
+    >
     {toolButtons.map(({ id, icon: Icon, label }) => (
       <button key={id} title={label}
       onClick={() => { setTool(id); if (textActive) { setTextActive(false); setTextVal(""); } }}
       style={{
         width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center",
-        borderRadius: "10px",
+        borderRadius: 10,
         border: tool === id ? "1.5px solid var(--accent-border)" : "1.5px solid transparent",
                                                      background: tool === id ? "var(--accent-dim)" : "transparent",
                                                      color: tool === id ? "var(--accent)" : "var(--text-secondary)",
@@ -859,48 +1008,26 @@ export default function WhiteboardPage() {
       }}
       ><Icon size={16} /></button>
     ))}
-
-    <div style={{ width: "100%", height: 1, background: "var(--border)", margin: "4px 0" }} />
-
-    <button title="Undo (Ctrl+Z)" onClick={undo} disabled={histIdx === 0}
-    style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "10px", border: "1.5px solid transparent", background: "transparent", color: histIdx === 0 ? "var(--text-muted)" : "var(--text-secondary)", cursor: histIdx === 0 ? "not-allowed" : "pointer" }}
-    ><Undo size={15} /></button>
-
-    <button title="Redo (Ctrl+Shift+Z)" onClick={redo} disabled={histIdx >= histLen - 1}
-    style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "10px", border: "1.5px solid transparent", background: "transparent", color: histIdx >= histLen - 1 ? "var(--text-muted)" : "var(--text-secondary)", cursor: histIdx >= histLen - 1 ? "not-allowed" : "pointer" }}
-    ><Redo size={15} /></button>
-
-    <div style={{ width: "100%", height: 1, background: "var(--border)", margin: "4px 0" }} />
-
-    <button title="Save (Ctrl+S)" onClick={saveBoard}
-    style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "10px", border: "1.5px solid transparent", background: saveStatus === "saved" ? "var(--accent-dim)" : "transparent", color: saveStatus === "saved" ? "var(--accent)" : "var(--text-secondary)", cursor: "pointer", transition: "all 0.3s" }}
-    >{saveStatus === "saved" ? <CheckCircle2 size={15} /> : <Save size={15} />}</button>
-
-    <button title="Load saved" onClick={loadBoard}
-    style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "10px", border: "1.5px solid transparent", background: "transparent", color: "var(--text-secondary)", cursor: "pointer" }}
-    ><FolderOpen size={15} /></button>
-
-    <button title="Export PNG" onClick={exportPNG}
-    style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "10px", border: "1.5px solid transparent", background: "transparent", color: "var(--text-secondary)", cursor: "pointer" }}
-    ><Download size={15} /></button>
-
-    <button title="Clear All" onClick={clearAll}
-    style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "10px", border: "1.5px solid transparent", background: "transparent", color: "#ff4d4f", cursor: "pointer" }}
-    ><Trash2 size={15} /></button>
     </div>
 
-    {/* ── Right: Properties ── */}
-    <div className="absolute right-4 top-4 flex flex-col gap-3 p-3 rounded-2xl"
-    style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "0 8px 40px rgba(0,0,0,0.5)", zIndex: 40, minWidth: 186 }}>
-
+    {/* ════════════════ RIGHT: Properties panel — starts just below zoom controls ════════════════ */}
+    <div
+    style={{
+      position: "absolute", right: 16, top: TOP_Y + 44, zIndex: 40,
+      display: "flex", flexDirection: "column", gap: 14, padding: 14,
+      background: "var(--surface)", border: "1px solid var(--border)",
+          borderRadius: 16, boxShadow: "0 8px 40px rgba(0,0,0,0.4)", minWidth: 186,
+    }}
+    >
     {/* Selected object actions */}
     {selectedId && (
       <div>
       <p style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "monospace", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em" }}>Selected</p>
       <button onClick={deleteSelected} style={{
-        width: "100%", padding: "6px 0", borderRadius: 8, border: "1px solid rgba(255,77,79,0.3)",
-                    background: "rgba(255,77,79,0.08)", color: "#ff4d4f", fontSize: 11,
-                    fontFamily: "monospace", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+        width: "100%", padding: "6px 0", borderRadius: 8,
+        border: "1px solid rgba(255,77,79,0.3)", background: "rgba(255,77,79,0.08)",
+                    color: "#ff4d4f", fontSize: 11, fontFamily: "monospace", cursor: "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
       }}>
       <Trash2 size={12} /> Delete (Del)
       </button>
@@ -938,7 +1065,7 @@ export default function WhiteboardPage() {
     </div>
     </div>
 
-    {/* Width */}
+    {/* Stroke width */}
     <div>
     <p style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "monospace", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em" }}>Width</p>
     <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
@@ -955,17 +1082,6 @@ export default function WhiteboardPage() {
     </div>
     </div>
 
-    {/* Zoom */}
-    <div>
-    <p style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "monospace", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em" }}>Zoom</p>
-    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-    <button onClick={() => setZoom(z => Math.max(z * 0.8, 0.2))} style={{ width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--text-secondary)", cursor: "pointer" }}><ZoomOut size={12} /></button>
-    <span style={{ fontSize: 11, color: "var(--text-secondary)", fontFamily: "monospace", minWidth: 40, textAlign: "center" }}>{Math.round(zoom * 100)}%</span>
-    <button onClick={() => setZoom(z => Math.min(z * 1.2, 5))} style={{ width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--text-secondary)", cursor: "pointer" }}><ZoomIn size={12} /></button>
-    <button onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }} style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "monospace", background: "transparent", border: "none", cursor: "pointer", padding: "0 4px" }}>Reset</button>
-    </div>
-    </div>
-
     {/* Stats */}
     <div style={{ padding: "6px 8px", borderRadius: 8, background: "var(--surface-2)", fontSize: 10, color: "var(--text-muted)", fontFamily: "monospace", display: "flex", justifyContent: "space-between" }}>
     <span>Objects</span>
@@ -973,10 +1089,19 @@ export default function WhiteboardPage() {
     </div>
     </div>
 
-    {/* ── Bottom status bar ── */}
-    <div className="absolute bottom-4 left-1/2 -translate-x-1/2"
-    style={{ background: "var(--surface)", border: "1px solid var(--accent-border)", borderRadius: 99, padding: "6px 16px", fontSize: 11, fontFamily: "monospace", color: "var(--accent)", zIndex: 40, boxShadow: "0 0 20px rgba(0,245,160,0.1)", display: "flex", alignItems: "center", gap: 8 }}>
-    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--accent)", display: "inline-block" }} />
+    {/* ════════════════ BOTTOM: Status pill ════════════════ */}
+    <div
+    style={{
+      position: "absolute", bottom: 20, left: "50%", transform: "translateX(-50%)",
+          zIndex: 40, display: "flex", alignItems: "center", gap: 8,
+          background: "var(--surface)", border: "1px solid var(--accent-border)",
+          borderRadius: 99, padding: "6px 16px",
+          fontSize: 11, fontFamily: "monospace", color: "var(--accent)",
+          boxShadow: "0 0 20px rgba(0,245,160,0.1)",
+          whiteSpace: "nowrap",
+    }}
+    >
+    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--accent)", display: "inline-block", flexShrink: 0 }} />
     {toolButtons.find(t => t.id === tool)?.label?.split(" (")[0] || tool}
     {tool === "select" && selectedId
       ? <span style={{ color: "var(--text-muted)", fontSize: 10 }}>• Drag to move • Handles to resize • Del to delete</span>
@@ -984,17 +1109,135 @@ export default function WhiteboardPage() {
     }
     </div>
 
-    {/* ── Top-left badge ── */}
-    <div className="absolute top-4 left-20 flex items-center gap-2"
-    style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 99, padding: "5px 12px", fontSize: 11, fontFamily: "monospace", color: "var(--text-secondary)", zIndex: 40 }}>
-    <Users size={12} style={{ color: "var(--accent)" }} />
-    <span>You • 1 active</span>
-    {saveStatus === "saved" && (
-      <span style={{ color: "var(--accent)", display: "flex", alignItems: "center", gap: 4, marginLeft: 4 }}>
-      <CheckCircle2 size={11} /> Saved
-      </span>
+    {/* ════════════════ INVITE MODAL ════════════════ */}
+    {showInvite && (
+      <>
+      {/* Backdrop */}
+      <div
+      onClick={() => setShowInvite(false)}
+      style={{ position: "absolute", inset: 0, zIndex: 50, background: "rgba(0,0,0,0.45)", backdropFilter: "blur(2px)" }}
+      />
+
+      {/* Modal */}
+      <div
+      style={{
+        position: "absolute", top: "50%", left: "50%",
+        transform: "translate(-50%, -50%)",
+                    zIndex: 51, width: 420,
+                    background: "var(--surface)", border: "1px solid var(--border)",
+                    borderRadius: 20, padding: 28,
+                    boxShadow: "0 24px 80px rgba(0,0,0,0.6)",
+      }}
+      >
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+      <div>
+      <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "var(--text-primary)", fontFamily: "monospace" }}>
+      Invite Collaborators
+      </h3>
+      <p style={{ margin: "4px 0 0", fontSize: 12, color: "var(--text-muted)", fontFamily: "monospace" }}>
+      Work together in real-time
+      </p>
+      </div>
+      <button
+      onClick={() => setShowInvite(false)}
+      style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "var(--text-muted)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+      ><X size={14} /></button>
+      </div>
+
+      {/* Copy link row */}
+      <div style={{ marginBottom: 16 }}>
+      <p style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "monospace", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em" }}>Share Link</p>
+      <div style={{ display: "flex", gap: 8 }}>
+      <div style={{
+        flex: 1, padding: "8px 12px", borderRadius: 10,
+        background: "var(--surface-2)", border: "1px solid var(--border)",
+                    fontSize: 11, fontFamily: "monospace", color: "var(--text-muted)",
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+      }}>
+      {typeof window !== "undefined" ? window.location.href : "https://app.revivalhq.com/whiteboard"}
+      </div>
+      <button
+      onClick={handleCopyLink}
+      style={{
+        padding: "8px 14px", borderRadius: 10,
+        background: linkCopied ? "var(--accent-dim)" : "var(--surface-2)",
+                    border: linkCopied ? "1px solid var(--accent-border)" : "1px solid var(--border)",
+                    color: linkCopied ? "var(--accent)" : "var(--text-secondary)",
+                    fontSize: 11, fontFamily: "monospace", cursor: "pointer",
+                    display: "flex", alignItems: "center", gap: 6, transition: "all 0.2s",
+                    whiteSpace: "nowrap",
+      }}
+      >
+      {linkCopied ? <CheckCircle2 size={13} /> : <Copy size={13} />}
+      {linkCopied ? "Copied!" : "Copy"}
+      </button>
+      </div>
+      </div>
+
+      {/* Divider */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+      <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
+      <span style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "monospace" }}>OR INVITE BY EMAIL</span>
+      <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
+      </div>
+
+      {/* Email input */}
+      <div style={{ marginBottom: 12 }}>
+      <p style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "monospace", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em" }}>Email address</p>
+      <div style={{ display: "flex", gap: 8 }}>
+      <input
+      type="email"
+      value={inviteEmail}
+      onChange={e => setInviteEmail(e.target.value)}
+      onKeyDown={e => { if (e.key === "Enter") handleSendInvite(); }}
+      placeholder="colleague@company.com"
+      style={{
+        flex: 1, padding: "9px 12px", borderRadius: 10,
+        background: "var(--surface-2)", border: "1px solid var(--border)",
+                    color: "var(--text-primary)", fontSize: 13, fontFamily: "monospace",
+                    outline: "none",
+      }}
+      />
+      <button
+      onClick={handleSendInvite}
+      style={{
+        padding: "9px 16px", borderRadius: 10,
+        background: inviteSent ? "var(--accent-dim)" : "var(--accent)",
+                    border: inviteSent ? "1px solid var(--accent-border)" : "none",
+                    color: inviteSent ? "var(--accent)" : "black",
+                    fontSize: 12, fontFamily: "monospace", fontWeight: 700, cursor: "pointer",
+                    display: "flex", alignItems: "center", gap: 6, transition: "all 0.2s",
+                    whiteSpace: "nowrap",
+      }}
+      >
+      {inviteSent ? <><CheckCircle2 size={13} /> Sent!</> : <><Mail size={13} /> Send</>}
+      </button>
+      </div>
+      </div>
+
+      {/* Current collaborators */}
+      <div>
+      <p style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "monospace", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+      Currently active · {collaborators.length}
+      </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      {collaborators.map((c, i) => (
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 10px", borderRadius: 10, background: "var(--surface-2)" }}>
+        <div style={{ width: 28, height: 28, borderRadius: "50%", background: c.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700, color: "#000", flexShrink: 0 }}>{c.initials}</div>
+        <div>
+        <div style={{ fontSize: 12, color: "var(--text-primary)", fontFamily: "monospace", fontWeight: 600 }}>{c.name}</div>
+        <div style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "monospace" }}>Owner</div>
+        </div>
+        <div style={{ marginLeft: "auto", width: 7, height: 7, borderRadius: "50%", background: "#00f5a0", boxShadow: "0 0 6px #00f5a0" }} />
+        </div>
+      ))}
+      </div>
+      </div>
+      </div>
+      </>
     )}
-    </div>
+
     </div>
     </div>
   );
