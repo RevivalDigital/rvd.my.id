@@ -15,6 +15,8 @@ import {
   List,
   Download,
   Eye,
+  Trash2,
+  Loader2,
 } from "lucide-react";
 import PocketBase from "pocketbase";
 
@@ -63,6 +65,8 @@ export default function FilesPage() {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [previewFile, setPreviewFile] = useState<FileRecord | null>(null);
+  const [deleteFile, setDeleteFile] = useState<FileRecord | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -221,6 +225,23 @@ export default function FilesPage() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteFile) return;
+    try {
+      setIsDeleting(true);
+      await pb.collection("files").delete(deleteFile.id);
+      setItems((prev) => prev.filter((f) => f.id !== deleteFile.id));
+      if (previewFile && previewFile.id === deleteFile.id) {
+        setPreviewFile(null);
+      }
+    } catch (error) {
+      console.error("Failed to delete file", error);
+    } finally {
+      setIsDeleting(false);
+      setDeleteFile(null);
+    }
   };
 
   const handleUploadSubmit = async (e: React.FormEvent) => {
@@ -396,6 +417,16 @@ export default function FilesPage() {
                       >
                         <Download size={12} />
                       </button>
+                      <button
+                        type="button"
+                        className="p-1 hover:bg-red-500/20 rounded text-[var(--text-muted)] hover:text-red-400"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteFile(file);
+                        }}
+                      >
+                        <Trash2 size={12} />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -465,6 +496,16 @@ export default function FilesPage() {
                         }}
                       >
                         <Download size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        className="p-1 hover:bg-red-500/20 rounded text-[var(--text-muted)] hover:text-red-400"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteFile(file);
+                        }}
+                      >
+                        <Trash2 size={13} />
                       </button>
                     </div>
                   </div>
@@ -576,6 +617,45 @@ export default function FilesPage() {
                     </div>
                   );
                 })()}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {deleteFile && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+            <div className="card w-full max-w-sm p-5">
+              <h2 className="text-sm font-semibold mb-2">Hapus file?</h2>
+              <p className="text-xs text-[var(--text-muted)] mb-4">
+                File "{deleteFile.name}" akan dihapus dari storage dan tidak bisa dikembalikan.
+              </p>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  className="px-3 py-1.5 text-xs rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-white/5 disabled:opacity-50"
+                  onClick={() => !isDeleting && setDeleteFile(null)}
+                  disabled={isDeleting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="px-3 py-1.5 text-xs rounded-lg bg-red-500 text-white font-semibold hover:bg-red-600 disabled:opacity-50 inline-flex items-center gap-1.5"
+                  onClick={handleDeleteConfirm}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? (
+                    <>
+                      <Loader2 size={12} className="animate-spin" />
+                      Menghapus...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={12} />
+                      Hapus
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           </div>

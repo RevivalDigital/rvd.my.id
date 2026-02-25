@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Topbar from "@/components/Topbar";
-import { Plus, MoreHorizontal, GripVertical, User, Calendar, Tag, Paperclip, Folder } from "lucide-react";
+import { Plus, MoreHorizontal, GripVertical, User, Calendar, Tag, Paperclip, Folder, Loader2, Trash2 } from "lucide-react";
 import type { Task, TaskStatus, User as DashboardUser, Project } from "@/types";
 import PocketBase from "pocketbase";
 
@@ -65,6 +65,9 @@ export default function KanbanPage() {
   const [formTagsText, setFormTagsText] = useState("");
   const [formAttachments, setFormAttachments] = useState<FileList | null>(null);
   const [formExistingAttachments, setFormExistingAttachments] = useState<string[]>([]);
+  const [isLoadingTasks, setIsLoadingTasks] = useState(false);
+  const [deleteTask, setDeleteTask] = useState<Task | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const authModel = pb.authStore.model as any;
 
@@ -73,6 +76,7 @@ export default function KanbanPage() {
 
     async function loadTasks() {
       try {
+        setIsLoadingTasks(true);
         const records = await pb
           .collection("tasks")
           .getFullList({ sort: "+sort_order", expand: "assignee,project" });
@@ -121,6 +125,10 @@ export default function KanbanPage() {
         setTasks(mapped);
       } catch (error) {
         console.error("Failed to load tasks from PocketBase", error);
+      } finally {
+        if (!cancelled) {
+          setIsLoadingTasks(false);
+        }
       }
     }
 
@@ -276,19 +284,25 @@ export default function KanbanPage() {
     setEditingTask(null);
   };
 
-  const handleDeleteTask = async (task: Task) => {
-    const confirmed = window.confirm(`Hapus task "${task.title}"?`);
-    if (!confirmed) return;
+  const openDeleteConfirm = (task: Task) => {
+    setDeleteTask(task);
+    setOptionsTask(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTask) return;
     try {
-      await pb.collection("tasks").delete(task.id);
-      setTasks((prev) => prev.filter((t) => t.id !== task.id));
-      if (viewTask && viewTask.id === task.id) {
+      setIsDeleting(true);
+      await pb.collection("tasks").delete(deleteTask.id);
+      setTasks((prev) => prev.filter((t) => t.id !== deleteTask.id));
+      if (viewTask && viewTask.id === deleteTask.id) {
         setViewTask(null);
       }
     } catch (error) {
       console.error("Failed to delete task", error);
     } finally {
-      setOptionsTask(null);
+      setIsDeleting(false);
+      setDeleteTask(null);
     }
   };
 
@@ -450,7 +464,15 @@ export default function KanbanPage() {
     <div className="flex flex-col h-screen">
       <Topbar title="Kanban Board" subtitle="Drag tasks between columns to update status" />
       <div className="flex-1 overflow-x-auto p-6">
-        <div className="flex gap-4 h-full min-w-max">
+        <div className="relative flex gap-4 h-full min-w-max">
+          {isLoadingTasks && tasks.length === 0 && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-white/5 border border-white/10 text-xs text-[var(--text-secondary)]">
+                <Loader2 size={14} className="animate-spin text-[var(--accent)]" />
+                <span>Memuat tasks...</span>
+              </div>
+            </div>
+          )}
           {COLUMNS.map((col) => {
             const colTasks = getColumnTasks(col.id);
             const isDragTarget = dragOver === col.id;
@@ -946,7 +968,7 @@ export default function KanbanPage() {
               </button>
               <button
                 className="w-full text-left px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20"
-                onClick={() => handleDeleteTask(optionsTask)}
+                onClick={() => openDeleteConfirm(optionsTask)}
               >
                 Delete task
               </button>
@@ -958,6 +980,44 @@ export default function KanbanPage() {
                 onClick={() => setOptionsTask(null)}
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {deleteTask && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="card w-full max-w-sm p-5">
+            <h2 className="text-sm font-semibold mb-2">Hapus task?</h2>
+            <p className="text-xs text-[var(--text-muted)] mb-4">
+              Task "{deleteTask.title}" akan dihapus dari board dan PocketBase. Tindakan ini tidak bisa dibatalkan.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                className="px-3 py-1.5 text-xs rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-white/5 disabled:opacity-50"
+                onClick={() => !isDeleting && setDeleteTask(null)}
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="px-3 py-1.5 text-xs rounded-lg bg-red-500 text-white font-semibold hover:bg-red-600 disabled:opacity-50 inline-flex items-center gap-1.5"
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 size={12} className="animate-spin" />
+                    Menghapus...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={12} />
+                    Hapus
+                  </>
+                )}
               </button>
             </div>
           </div>
