@@ -208,17 +208,38 @@ export default function KanbanPage() {
   const handleDragStart = (id: string) => setDragging(id);
   const handleDragEnd = () => { setDragging(null); setDragOver(null); };
 
-  const handleDrop = (col: TaskStatus) => {
+  const handleDrop = async (col: TaskStatus) => {
     if (!dragging) return;
     setTasks((prev) => prev.map((t) => t.id === dragging ? { ...t, status: col } : t));
 
     const updatedId = dragging;
 
-    pb.collection("tasks")
-      .update(updatedId, { status: col })
-      .catch((error) => {
-        console.error("Failed to update task status", error);
-      });
+    try {
+      const record = await pb
+        .collection("tasks")
+        .update(updatedId, { status: col }, { expand: "assignee" });
+      const assigneeIds: string[] = Array.isArray(record.assignee)
+        ? (record.assignee as string[])
+        : record.assignee
+        ? [record.assignee as string]
+        : [];
+      await Promise.all(
+        assigneeIds.map((uid) =>
+          pb.collection("notifications").create({
+            title: "Task Status Updated",
+            body: `Status task "${record.title}" berubah ke ${col}`,
+            type: "task_updated",
+            severity: "info",
+            recipient: uid,
+            is_read: false,
+            entity_type: "task",
+            entity_id: record.id,
+          })
+        )
+      );
+    } catch (error) {
+      console.error("Failed to update task status", error);
+    }
 
     setDragging(null);
     setDragOver(null);
@@ -306,6 +327,24 @@ export default function KanbanPage() {
     try {
       setIsDeleting(true);
       await pb.collection("tasks").delete(deleteTask.id);
+      try {
+        const model = pb.authStore.model as any;
+        const uid = model?.id as string | undefined;
+        if (uid) {
+          const related = await pb
+            .collection("notifications")
+            .getFullList({
+              filter: `recipient = "${uid}" && entity_type = "task" && entity_id = "${deleteTask.id}"`,
+            });
+          await Promise.all(
+            related.map((n: any) =>
+              pb.collection("notifications").delete(n.id as string)
+            )
+          );
+        }
+      } catch (err) {
+        console.error("Failed to delete related notifications", err);
+      }
       setTasks((prev) => prev.filter((t) => t.id !== deleteTask.id));
       if (viewTask && viewTask.id === deleteTask.id) {
         setViewTask(null);
@@ -467,6 +506,32 @@ export default function KanbanPage() {
           );
         } catch (err) {
           console.error("Failed to create assignment notifications (update)", err);
+        }
+
+        try {
+          if (record.status !== editingTask.status) {
+            const assigneeIds: string[] = Array.isArray(record.assignee)
+              ? (record.assignee as string[])
+              : record.assignee
+              ? [record.assignee as string]
+              : [];
+            await Promise.all(
+              assigneeIds.map((uid) =>
+                pb.collection("notifications").create({
+                  title: "Task Status Updated",
+                  body: `Status task "${record.title}" berubah ke ${record.status}`,
+                  type: "task_updated",
+                  severity: "info",
+                  recipient: uid,
+                  is_read: false,
+                  entity_type: "task",
+                  entity_id: record.id,
+                })
+              )
+            );
+          }
+        } catch (err) {
+          console.error("Failed to create status change notifications", err);
         }
 
         setTasks((prev) =>
