@@ -42,6 +42,75 @@ const pbBaseUrl =
 const pb = new PocketBase(pbBaseUrl);
 pb.autoCancellation(false);
 
+function ChecklistAdder({
+  task,
+  setTasks,
+}: {
+  task: Task;
+  setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
+}) {
+  const [text, setText] = useState("");
+  return (
+    <div className="mt-2 flex items-center gap-2">
+      <input
+        type="text"
+        className="flex-1 px-2 py-1 rounded bg-[var(--surface-2)] border border-[var(--border)] text-[11px] outline-none"
+        placeholder="Tambah checklist..."
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={async (e) => {
+          if (e.key === "Enter") {
+            const val = text.trim();
+            if (!val) return;
+            const next = [...(task.checklist || []), { text: val, done: false }];
+            try {
+              const record = await pb
+                .collection("tasks")
+                .update(task.id, { checklist: next });
+              setTasks((prev) =>
+                prev.map((t) =>
+                  t.id === task.id
+                    ? { ...t, checklist: record.checklist || next }
+                    : t
+                )
+              );
+              setText("");
+            } catch (error) {
+              console.error("Failed to add checklist item", error);
+            }
+          }
+        }}
+      />
+      <button
+        className="w-6 h-6 rounded-md flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--accent)] hover:bg-[var(--accent-dim)]"
+        onClick={async () => {
+          const val = text.trim();
+          if (!val) return;
+          const next = [...(task.checklist || []), { text: val, done: false }];
+          try {
+            const record = await pb
+              .collection("tasks")
+              .update(task.id, { checklist: next });
+            setTasks((prev) =>
+              prev.map((t) =>
+                t.id === task.id
+                  ? { ...t, checklist: record.checklist || next }
+                  : t
+              )
+            );
+            setText("");
+          } catch (error) {
+            console.error("Failed to add checklist item", error);
+          }
+        }}
+        title="Tambah checklist"
+      >
+        <Plus size={14} />
+      </button>
+    </div>
+  );
+}
+
 export default function KanbanPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [dragging, setDragging] = useState<string | null>(null);
@@ -68,6 +137,9 @@ export default function KanbanPage() {
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
   const [deleteTask, setDeleteTask] = useState<Task | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [newChecklistText, setNewChecklistText] = useState("");
+  const [editingChecklistIndex, setEditingChecklistIndex] = useState<number | null>(null);
+  const [editingChecklistText, setEditingChecklistText] = useState("");
 
   const authModel = pb.authStore.model as any;
 
@@ -103,6 +175,7 @@ export default function KanbanPage() {
             id: r.id,
             title: r.title,
             description: r.description,
+            checklist: r.checklist,
             status: r.status,
             priority: r.priority,
             type: r.type,
@@ -314,6 +387,7 @@ export default function KanbanPage() {
       const basePayload: any = {
         title: formTitle.trim(),
         description: formDescription.trim() || null,
+        checklist: null,
         status: formStatus,
         priority: formPriority,
         type: formType || null,
@@ -345,6 +419,7 @@ export default function KanbanPage() {
           id: record.id,
           title: record.title,
           description: record.description || undefined,
+          checklist: record.checklist || [],
           status: record.status,
           priority: record.priority,
           type: record.type || undefined,
@@ -407,6 +482,7 @@ export default function KanbanPage() {
                   ...t,
                   title: record.title,
                   description: record.description || undefined,
+                  checklist: record.checklist || t.checklist || [],
                   status: record.status,
                   priority: record.priority,
                   type: record.type || undefined,
@@ -457,6 +533,25 @@ export default function KanbanPage() {
       console.error("Failed to save task", error);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const updateTaskChecklist = async (
+    taskId: string,
+    next: { text: string; done: boolean }[]
+  ) => {
+    try {
+      const record = await pb.collection("tasks").update(taskId, { checklist: next });
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === taskId ? { ...t, checklist: record.checklist || next } : t
+        )
+      );
+      setViewTask((v) =>
+        v && v.id === taskId ? ({ ...v, checklist: record.checklist || next } as Task) : v
+      );
+    } catch (error) {
+      console.error("Failed to update checklist", error);
     }
   };
 
@@ -525,6 +620,11 @@ export default function KanbanPage() {
                           <p className="text-sm font-medium leading-tight truncate">
                             {task.title}
                           </p>
+                          {task.description && (
+                            <p className="text-[11px] text-[var(--text-secondary)] mt-0.5 line-clamp-2">
+                              {task.description}
+                            </p>
+                          )}
                         </div>
                         <button
                           className="opacity-0 group-hover:opacity-100 transition-opacity text-[var(--text-muted)] hover:text-[var(--text-primary)]"
@@ -564,6 +664,59 @@ export default function KanbanPage() {
                           </span>
                         )}
                       </div>
+
+                      {Array.isArray(task.checklist) && task.checklist.length > 0 && (
+                        <div className="mb-3">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[10px] text-[var(--text-muted)]">
+                              Checklist
+                            </span>
+                            <span className="text-[10px] text-[var(--text-muted)]">
+                              {task.checklist.filter((i) => i.done).length}/{task.checklist.length}
+                            </span>
+                          </div>
+                          <div className="space-y-1">
+                            {task.checklist.slice(0, 3).map((item, idx) => (
+                              <button
+                                key={idx}
+                                className={`w-full text-left text-[11px] px-2 py-1 rounded border ${
+                                  item.done
+                                    ? "bg-[var(--accent-dim)] border-[var(--accent-border)] text-[var(--text-primary)]"
+                                    : "border-[var(--border)] text-[var(--text-secondary)]"
+                                }`}
+                                onClick={async () => {
+                                  const next =
+                                    (task.checklist || []).map((it, i) =>
+                                      i === idx ? { ...it, done: !it.done } : it
+                                    );
+                                  try {
+                                    const record = await pb
+                                      .collection("tasks")
+                                      .update(task.id, { checklist: next });
+                                    setTasks((prev) =>
+                                      prev.map((t) =>
+                                        t.id === task.id ? { ...t, checklist: record.checklist || next } : t
+                                      )
+                                    );
+                                  } catch (error) {
+                                    console.error("Failed to toggle checklist item", error);
+                                  }
+                                }}
+                              >
+                                {item.done ? "✔ " : "○ "}
+                                {item.text}
+                              </button>
+                            ))}
+                            {task.checklist.length > 3 && (
+                              <div className="text-[10px] text-[var(--text-muted)]">
+                                +{task.checklist.length - 3} lainnya
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      <ChecklistAdder task={task} setTasks={setTasks} />
 
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1">
@@ -849,6 +1002,120 @@ export default function KanbanPage() {
                   <p className="whitespace-pre-wrap">{viewTask.description}</p>
                 </div>
               )}
+              <div>
+                <p className="text-xs text-[var(--text-muted)] mb-0.5">Checklist</p>
+                {Array.isArray(viewTask.checklist) && viewTask.checklist.length > 0 ? (
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-[var(--text-muted)]">
+                        Progress
+                      </span>
+                      <span className="text-[10px] text-[var(--text-muted)]">
+                        {viewTask.checklist.filter((i) => i.done).length}/{viewTask.checklist.length}
+                      </span>
+                    </div>
+                    {viewTask.checklist.map((item, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <button
+                          className={`px-2 py-1 rounded border text-[11px] ${
+                            item.done
+                              ? "bg-[var(--accent-dim)] border-[var(--accent-border)]"
+                              : "border-[var(--border)]"
+                          }`}
+                          onClick={async () => {
+                            const next = (viewTask.checklist || []).map((it, i) =>
+                              i === idx ? { ...it, done: !it.done } : it
+                            );
+                            await updateTaskChecklist(viewTask.id, next);
+                          }}
+                        >
+                          {item.done ? "✔" : "○"}
+                        </button>
+                        {editingChecklistIndex === idx ? (
+                          <>
+                            <input
+                              className="flex-1 px-2 py-1 rounded bg-[var(--surface-2)] border border-[var(--border)] text-[11px] outline-none"
+                              value={editingChecklistText}
+                              onChange={(e) => setEditingChecklistText(e.target.value)}
+                            />
+                            <button
+                              className="px-2 py-1 rounded bg-[var(--accent)] text-black text-[11px]"
+                              onClick={async () => {
+                                const val = editingChecklistText.trim();
+                                if (!val) return;
+                                const next = (viewTask.checklist || []).map((it, i) =>
+                                  i === idx ? { ...it, text: val } : it
+                                );
+                                await updateTaskChecklist(viewTask.id, next);
+                                setEditingChecklistIndex(null);
+                                setEditingChecklistText("");
+                              }}
+                            >
+                              Save
+                            </button>
+                            <button
+                              className="px-2 py-1 rounded border border-[var(--border)] text-[11px]"
+                              onClick={() => {
+                                setEditingChecklistIndex(null);
+                                setEditingChecklistText("");
+                              }}
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <span className="flex-1 text-[12px]">
+                              {item.text}
+                            </span>
+                            <button
+                              className="px-2 py-1 rounded border border-[var(--border)] text-[11px]"
+                              onClick={() => {
+                                setEditingChecklistIndex(idx);
+                                setEditingChecklistText(item.text);
+                              }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              className="px-2 py-1 rounded bg-red-500/10 text-red-400 text-[11px]"
+                              onClick={async () => {
+                                const next = (viewTask.checklist || []).filter((_, i) => i !== idx);
+                                await updateTaskChecklist(viewTask.id, next);
+                              }}
+                            >
+                              Hapus
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-[var(--text-muted)]">Belum ada checklist</p>
+                )}
+                <div className="mt-2 flex items-center gap-2">
+                  <input
+                    type="text"
+                    className="flex-1 px-2 py-1 rounded bg-[var(--surface-2)] border border-[var(--border)] text-[11px] outline-none"
+                    placeholder="Tambah checklist..."
+                    value={newChecklistText}
+                    onChange={(e) => setNewChecklistText(e.target.value)}
+                  />
+                  <button
+                    className="px-2 py-1 rounded bg-[var(--accent)] text-black text-[11px]"
+                    onClick={async () => {
+                      const val = newChecklistText.trim();
+                      if (!val) return;
+                      const next = [...(viewTask.checklist || []), { text: val, done: false }];
+                      await updateTaskChecklist(viewTask.id, next);
+                      setNewChecklistText("");
+                    }}
+                  >
+                    Tambah
+                  </button>
+                </div>
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <p className="text-xs text-[var(--text-muted)] mb-0.5">Status</p>

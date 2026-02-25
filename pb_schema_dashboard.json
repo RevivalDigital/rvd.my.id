@@ -488,6 +488,16 @@
       },
       {
         "hidden": false,
+        "id": "json_tasks_checklist",
+        "maxSize": 20000,
+        "name": "checklist",
+        "presentable": false,
+        "required": false,
+        "system": false,
+        "type": "json"
+      },
+      {
+        "hidden": false,
         "id": "file_tasks_attachments",
         "maxSelect": 10,
         "maxSize": 20971520,
@@ -887,18 +897,17 @@
         "type": "relation"
       },
       {
-        "autogeneratePattern": "",
+        "cascadeDelete": false,
+        "collectionId": "pbc_dash_chat001",
         "hidden": false,
-        "id": "text_chat_reply_to",
-        "max": 15,
-        "min": 0,
+        "id": "rel_chat_reply_to",
+        "maxSelect": 1,
+        "minSelect": 0,
         "name": "reply_to",
-        "pattern": "",
         "presentable": false,
-        "primaryKey": false,
         "required": false,
         "system": false,
-        "type": "text"
+        "type": "relation"
       },
       {
         "hidden": false,
