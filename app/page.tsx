@@ -223,11 +223,11 @@ export default function RootPage() {
                 <br />
                 Pro Trading Journal
               </h3>
-              <p className="text-gray-400 mb-8 text-lg">
+              <p className="text-gray-400 mb-6 text-lg">
                 Platform jurnal trading yang membantu trader mencatat setiap trade, menganalisis performa, dan menjaga
                 konsistensi dengan tampilan dashboard yang bersih dan terukur.
               </p>
-              <ul className="space-y-4 text-sm text-gray-300">
+              <ul className="space-y-3 text-sm text-gray-300 mb-6">
                 <li className="flex items-center gap-3">
                   <svg className="w-5 h-5 text-[#00f5a0]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
@@ -241,6 +241,14 @@ export default function RootPage() {
                   Backend realtime menggunakan PocketBase
                 </li>
               </ul>
+              <a
+                href="https://tradelog.my.id"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center px-4 py-2 text-xs font-semibold rounded-full bg-[#00f5a0] text-black hover:opacity-90 transition-colors"
+              >
+                Visit TradeLog
+              </a>
             </div>
             <div className="flex-1 w-full">
               <div className="rounded-xl overflow-hidden border border-white/10 shadow-2xl">
@@ -267,6 +275,16 @@ export default function RootPage() {
                 <p className="text-xs text-gray-500">
                   Fokus: pemilik kost yang ingin mendapat visibilitas real-time atas okupansi dan arus kas.
                 </p>
+                <div className="mt-4">
+                  <a
+                    href="https://kost-hub.vercel.app"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center px-4 py-2 text-xs font-semibold rounded-full bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-colors"
+                  >
+                    Visit KostHub
+                  </a>
+                </div>
               </div>
               <div className="md:w-64 w-full">
                 <div className="rounded-xl overflow-hidden border border-white/10 bg-[#0f1115] aspect-video">
@@ -291,6 +309,16 @@ export default function RootPage() {
                 <p className="text-xs text-gray-500">
                   Fokus: investor institusional yang mencari akses aman dan terukur ke ekosistem DeFi.
                 </p>
+                <div className="mt-4">
+                  <a
+                    href="https://fidelweiss.vercel.app"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center px-4 py-2 text-xs font-semibold rounded-full bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-colors"
+                  >
+                    Visit Fidelweiss
+                  </a>
+                </div>
               </div>
               <div className="md:w-64 w-full">
                 <div className="rounded-xl overflow-hidden border border-white/10 bg-[#0f1115] aspect-video">
