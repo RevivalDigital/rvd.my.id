@@ -93,15 +93,15 @@ function roughArrow(
     ctx,
     x2, y2,
     x2 - headLen * Math.cos(angle - 0.4),
-    y2 - headLen * Math.sin(angle - 0.4),
-    roughness * 0.7
+            y2 - headLen * Math.sin(angle - 0.4),
+            roughness * 0.7
   );
   roughLine(
     ctx,
     x2, y2,
     x2 - headLen * Math.cos(angle + 0.4),
-    y2 - headLen * Math.sin(angle + 0.4),
-    roughness * 0.7
+            y2 - headLen * Math.sin(angle + 0.4),
+            roughness * 0.7
   );
 }
 
@@ -126,13 +126,13 @@ interface Shape {
 
 const COLORS = [
   "#e6edf3", // white/primary
-  "#00f5a0", // accent green
-  "#1890ff", // blue
-  "#ff4d4f", // red
-  "#faad14", // yellow
-  "#722ed1", // purple
-  "#ff7a00", // orange
-  "#eb2f96", // pink
+"#00f5a0", // accent green
+"#1890ff", // blue
+"#ff4d4f", // red
+"#faad14", // yellow
+"#722ed1", // purple
+"#ff7a00", // orange
+"#eb2f96", // pink
 ];
 
 const STROKE_WIDTHS = [1, 2, 4, 8];
@@ -169,7 +169,7 @@ export default function WhiteboardPage() {
     const rect = canvas.getBoundingClientRect();
     return {
       x: (clientX - rect.left - pan.x) / zoom,
-      y: (clientY - rect.top - pan.y) / zoom,
+                               y: (clientY - rect.top - pan.y) / zoom,
     };
   }, [pan, zoom]);
 
@@ -274,7 +274,7 @@ export default function WhiteboardPage() {
       case "sticky": {
         const sw = 180;
         const sh = 140;
-        const sColor = shape.fill !== "transparent" ? shape.fill : "rgba(250,173,20,0.15)";
+        const sColor = (shape.fill && shape.fill !== "transparent") ? shape.fill : "rgba(250,173,20,0.15)";
         ctx.fillStyle = sColor;
         ctx.shadowColor = "rgba(0,0,0,0.3)";
         ctx.shadowBlur = 8;
@@ -415,15 +415,15 @@ export default function WhiteboardPage() {
 
     const newShape: Shape = {
       id: Math.random().toString(36).slice(2),
-      type: tool as ShapeType,
-      x: pos.x, y: pos.y,
-      x2: pos.x, y2: pos.y,
-      points: tool === "pencil" ? [[pos.x, pos.y]] : undefined,
-      color,
-      strokeWidth,
-      fill,
-      fontSize: 18,
-      seed: Math.floor(Math.random() * 100),
+                                      type: tool as ShapeType,
+                                      x: pos.x, y: pos.y,
+                                      x2: pos.x, y2: pos.y,
+                                      points: tool === "pencil" ? [[pos.x, pos.y]] : undefined,
+                                      color,
+                                      strokeWidth,
+                                      fill,
+                                      fontSize: 18,
+                                      seed: Math.floor(Math.random() * 100),
     };
     currentShapeRef.current = newShape;
   }, [tool, toCanvas, pan, color, strokeWidth, fill, pushHistory]);
@@ -474,14 +474,14 @@ export default function WhiteboardPage() {
     const pos = textPosRef.current;
     const newShape: Shape = {
       id: Math.random().toString(36).slice(2),
-      type: tool === "sticky" ? "sticky" : "text",
-      x: pos.x, y: pos.y,
-      text: textVal,
-      color,
-      strokeWidth,
-      fill,
-      fontSize: 18,
-      seed: Math.floor(Math.random() * 100),
+                                 type: tool === "sticky" ? "sticky" : "text",
+                                 x: pos.x, y: pos.y,
+                                 text: textVal,
+                                 color,
+                                 strokeWidth,
+                                 fill,
+                                 fontSize: 18,
+                                 seed: Math.floor(Math.random() * 100),
     };
     setShapes(prev => {
       const next = [...prev, newShape];
@@ -545,339 +545,339 @@ export default function WhiteboardPage() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
-      <Topbar
-        title="Whiteboard"
-        subtitle="Collaborative hand-drawn sketching"
+    <Topbar
+    title="Whiteboard"
+    subtitle="Collaborative hand-drawn sketching"
+    />
+
+    <div className="flex flex-1 overflow-hidden relative">
+    {/* Canvas */}
+    <canvas
+    ref={canvasRef}
+    className="flex-1 w-full h-full"
+    style={{
+      background: "var(--bg)",
+          cursor: cursorStyle,
+          touchAction: "none",
+    }}
+    onMouseDown={handleMouseDown}
+    onMouseMove={handleMouseMove}
+    onMouseUp={handleMouseUp}
+    onMouseLeave={handleMouseUp}
+    onWheel={handleWheel}
+    />
+
+    {/* Text input overlay */}
+    {editingText && (
+      <div
+      style={{
+        position: "absolute",
+        left: textPos.x,
+        top: textPos.y,
+        zIndex: 50,
+      }}
+      >
+      <textarea
+      autoFocus
+      value={textVal}
+      onChange={e => setTextVal(e.target.value)}
+      onBlur={commitText}
+      onKeyDown={e => {
+        if (e.key === "Escape") { setEditingText(false); }
+        if (e.key === "Enter" && !e.shiftKey && tool === "text") { e.preventDefault(); commitText(); }
+      }}
+      style={{
+        background: "rgba(13,17,23,0.85)",
+                     border: "2px dashed var(--accent)",
+                     color: color,
+                     fontFamily: "'DM Mono', monospace",
+                     fontSize: "18px",
+                     padding: "6px 10px",
+                     borderRadius: "6px",
+                     minWidth: "120px",
+                     minHeight: tool === "sticky" ? "100px" : "36px",
+                     outline: "none",
+                     resize: "both",
+                     lineHeight: 1.5,
+      }}
+      placeholder={tool === "sticky" ? "Write note..." : "Type text..."}
       />
-
-      <div className="flex flex-1 overflow-hidden relative">
-        {/* Canvas */}
-        <canvas
-          ref={canvasRef}
-          className="flex-1 w-full h-full"
-          style={{
-            background: "var(--bg)",
-            cursor: cursorStyle,
-            touchAction: "none",
-          }}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-          onWheel={handleWheel}
-        />
-
-        {/* Text input overlay */}
-        {editingText && (
-          <div
-            style={{
-              position: "absolute",
-              left: textPos.x,
-              top: textPos.y,
-              zIndex: 50,
-            }}
-          >
-            <textarea
-              autoFocus
-              value={textVal}
-              onChange={e => setTextVal(e.target.value)}
-              onBlur={commitText}
-              onKeyDown={e => {
-                if (e.key === "Escape") { setEditingText(false); }
-                if (e.key === "Enter" && !e.shiftKey && tool === "text") { e.preventDefault(); commitText(); }
-              }}
-              style={{
-                background: "rgba(13,17,23,0.85)",
-                border: "2px dashed var(--accent)",
-                color: color,
-                fontFamily: "'DM Mono', monospace",
-                fontSize: "18px",
-                padding: "6px 10px",
-                borderRadius: "6px",
-                minWidth: "120px",
-                minHeight: tool === "sticky" ? "100px" : "36px",
-                outline: "none",
-                resize: "both",
-                lineHeight: 1.5,
-              }}
-              placeholder={tool === "sticky" ? "Write note..." : "Type text..."}
-            />
-            <div style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "4px", fontFamily: "monospace" }}>
-              {tool === "text" ? "Enter to confirm • Esc to cancel" : "Click away to confirm"}
-            </div>
-          </div>
-        )}
-
-        {/* Left: Tool palette */}
-        <div
-          className="absolute left-4 top-1/2 -translate-y-1/2 flex flex-col gap-1 p-2 rounded-2xl"
-          style={{
-            background: "var(--surface)",
-            border: "1px solid var(--border)",
-            boxShadow: "0 8px 40px rgba(0,0,0,0.5)",
-            zIndex: 40,
-          }}
-        >
-          {toolButtons.map(({ id, icon: Icon, label }) => (
-            <button
-              key={id}
-              title={label}
-              onClick={() => setTool(id)}
-              style={{
-                width: 36,
-                height: 36,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: "10px",
-                border: tool === id ? "1.5px solid var(--accent-border)" : "1.5px solid transparent",
-                background: tool === id ? "var(--accent-dim)" : "transparent",
-                color: tool === id ? "var(--accent)" : "var(--text-secondary)",
-                cursor: "pointer",
-                transition: "all 0.15s",
-              }}
-              onMouseEnter={e => { if (tool !== id) (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.06)"; }}
-              onMouseLeave={e => { if (tool !== id) (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
-            >
-              <Icon size={16} />
-            </button>
-          ))}
-
-          <div style={{ width: "100%", height: 1, background: "var(--border)", margin: "4px 0" }} />
-
-          {/* Undo / Redo */}
-          <button
-            title="Undo (Ctrl+Z)"
-            onClick={undo}
-            disabled={histIdx === 0}
-            style={{
-              width: 36, height: 36,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              borderRadius: "10px", border: "1.5px solid transparent",
-              background: "transparent",
-              color: histIdx === 0 ? "var(--text-muted)" : "var(--text-secondary)",
-              cursor: histIdx === 0 ? "not-allowed" : "pointer",
-            }}
-          >
-            <Undo size={15} />
-          </button>
-          <button
-            title="Redo (Ctrl+Shift+Z)"
-            onClick={redo}
-            disabled={histIdx >= history.length - 1}
-            style={{
-              width: 36, height: 36,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              borderRadius: "10px", border: "1.5px solid transparent",
-              background: "transparent",
-              color: histIdx >= history.length - 1 ? "var(--text-muted)" : "var(--text-secondary)",
-              cursor: histIdx >= history.length - 1 ? "not-allowed" : "pointer",
-            }}
-          >
-            <Redo size={15} />
-          </button>
-
-          <div style={{ width: "100%", height: 1, background: "var(--border)", margin: "4px 0" }} />
-
-          {/* Clear */}
-          <button
-            title="Clear All"
-            onClick={clearAll}
-            style={{
-              width: 36, height: 36,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              borderRadius: "10px", border: "1.5px solid transparent",
-              background: "transparent", color: "#ff4d4f", cursor: "pointer",
-            }}
-          >
-            <Trash2 size={15} />
-          </button>
-
-          {/* Download */}
-          <button
-            title="Download PNG"
-            onClick={downloadCanvas}
-            style={{
-              width: 36, height: 36,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              borderRadius: "10px", border: "1.5px solid transparent",
-              background: "transparent", color: "var(--text-secondary)", cursor: "pointer",
-            }}
-          >
-            <Download size={15} />
-          </button>
-        </div>
-
-        {/* Top-right: Properties panel */}
-        <div
-          className="absolute right-4 top-4 flex flex-col gap-3 p-3 rounded-2xl"
-          style={{
-            background: "var(--surface)",
-            border: "1px solid var(--border)",
-            boxShadow: "0 8px 40px rgba(0,0,0,0.5)",
-            zIndex: 40,
-            minWidth: 180,
-          }}
-        >
-          {/* Stroke Color */}
-          <div>
-            <p style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "monospace", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em" }}>Stroke</p>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-              {COLORS.map(c => (
-                <button
-                  key={c}
-                  onClick={() => setColor(c)}
-                  style={{
-                    width: 20, height: 20,
-                    borderRadius: "50%",
-                    background: c,
-                    border: color === c ? "2px solid white" : "2px solid transparent",
-                    cursor: "pointer",
-                    boxShadow: color === c ? `0 0 8px ${c}` : "none",
-                    transition: "all 0.15s",
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Fill Color */}
-          <div>
-            <p style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "monospace", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em" }}>Fill</p>
-            <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-              {FILLS.map((f, i) => (
-                <button
-                  key={i}
-                  onClick={() => setFill(f)}
-                  title={i === 0 ? "None" : "Fill " + i}
-                  style={{
-                    width: 20, height: 20,
-                    borderRadius: 4,
-                    background: f === "transparent" ? "transparent" : f,
-                    border: fill === f ? "2px solid var(--accent)" : "1.5px solid var(--border)",
-                    cursor: "pointer",
-                    position: "relative",
-                    overflow: "hidden",
-                  }}
-                >
-                  {f === "transparent" && (
-                    <div style={{
-                      position: "absolute", inset: 0,
-                      background: "repeating-linear-gradient(45deg, #333 0px, #333 2px, transparent 2px, transparent 8px)",
-                    }} />
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Stroke Width */}
-          <div>
-            <p style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "monospace", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em" }}>Width</p>
-            <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
-              {STROKE_WIDTHS.map(w => (
-                <button
-                  key={w}
-                  onClick={() => setStrokeWidth(w)}
-                  style={{
-                    width: 28, height: 28,
-                    borderRadius: 6,
-                    border: strokeWidth === w ? "1.5px solid var(--accent)" : "1.5px solid var(--border)",
-                    background: strokeWidth === w ? "var(--accent-dim)" : "transparent",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    cursor: "pointer",
-                  }}
-                >
-                  <div style={{
-                    width: 14, height: w,
-                    background: strokeWidth === w ? "var(--accent)" : "var(--text-muted)",
-                    borderRadius: 99,
-                  }} />
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Zoom */}
-          <div>
-            <p style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "monospace", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em" }}>Zoom</p>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <button
-                onClick={() => setZoom(z => Math.max(z * 0.8, 0.2))}
-                style={{ width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--text-secondary)", cursor: "pointer" }}
-              ><ZoomOut size={12} /></button>
-              <span style={{ fontSize: 11, color: "var(--text-secondary)", fontFamily: "monospace", minWidth: 40, textAlign: "center" }}>
-                {Math.round(zoom * 100)}%
-              </span>
-              <button
-                onClick={() => setZoom(z => Math.min(z * 1.2, 5))}
-                style={{ width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--text-secondary)", cursor: "pointer" }}
-              ><ZoomIn size={12} /></button>
-              <button
-                onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}
-                style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "monospace", background: "transparent", border: "none", cursor: "pointer", padding: "0 4px" }}
-              >Reset</button>
-            </div>
-          </div>
-
-          {/* Shapes count */}
-          <div style={{
-            padding: "6px 8px",
-            borderRadius: 8,
-            background: "var(--surface-2)",
-            fontSize: 10,
-            color: "var(--text-muted)",
-            fontFamily: "monospace",
-            display: "flex",
-            justifyContent: "space-between",
-          }}>
-            <span>Shapes</span>
-            <span style={{ color: "var(--accent)", fontWeight: 600 }}>{shapes.length}</span>
-          </div>
-        </div>
-
-        {/* Bottom center: active tool indicator */}
-        <div
-          className="absolute bottom-4 left-1/2 -translate-x-1/2"
-          style={{
-            background: "var(--surface)",
-            border: "1px solid var(--accent-border)",
-            borderRadius: 99,
-            padding: "6px 16px",
-            fontSize: 11,
-            fontFamily: "monospace",
-            color: "var(--accent)",
-            zIndex: 40,
-            boxShadow: "0 0 20px rgba(0,245,160,0.1)",
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-          }}
-        >
-          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--accent)", display: "inline-block" }} />
-          {toolButtons.find(t => t.id === tool)?.label?.split(" (")[0] || tool}
-          <span style={{ color: "var(--text-muted)", fontSize: 10 }}>• Scroll to zoom • Alt+drag to pan</span>
-        </div>
-
-        {/* Online indicator (decorative) */}
-        <div
-          className="absolute top-4 left-4 flex items-center gap-2"
-          style={{
-            background: "var(--surface)",
-            border: "1px solid var(--border)",
-            borderRadius: 99,
-            padding: "5px 12px",
-            fontSize: 11,
-            fontFamily: "monospace",
-            color: "var(--text-secondary)",
-            zIndex: 40,
-          }}
-        >
-          <Users size={12} style={{ color: "var(--accent)" }} />
-          <span>You</span>
-          <span style={{ color: "var(--text-muted)" }}>• 1 active</span>
-        </div>
+      <div style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "4px", fontFamily: "monospace" }}>
+      {tool === "text" ? "Enter to confirm • Esc to cancel" : "Click away to confirm"}
       </div>
+      </div>
+    )}
+
+    {/* Left: Tool palette */}
+    <div
+    className="absolute left-4 top-1/2 -translate-y-1/2 flex flex-col gap-1 p-2 rounded-2xl"
+    style={{
+      background: "var(--surface)",
+          border: "1px solid var(--border)",
+          boxShadow: "0 8px 40px rgba(0,0,0,0.5)",
+          zIndex: 40,
+    }}
+    >
+    {toolButtons.map(({ id, icon: Icon, label }) => (
+      <button
+      key={id}
+      title={label}
+      onClick={() => setTool(id)}
+      style={{
+        width: 36,
+        height: 36,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: "10px",
+        border: tool === id ? "1.5px solid var(--accent-border)" : "1.5px solid transparent",
+                                                     background: tool === id ? "var(--accent-dim)" : "transparent",
+                                                     color: tool === id ? "var(--accent)" : "var(--text-secondary)",
+                                                     cursor: "pointer",
+                                                     transition: "all 0.15s",
+      }}
+      onMouseEnter={e => { if (tool !== id) (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.06)"; }}
+      onMouseLeave={e => { if (tool !== id) (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+      >
+      <Icon size={16} />
+      </button>
+    ))}
+
+    <div style={{ width: "100%", height: 1, background: "var(--border)", margin: "4px 0" }} />
+
+    {/* Undo / Redo */}
+    <button
+    title="Undo (Ctrl+Z)"
+    onClick={undo}
+    disabled={histIdx === 0}
+    style={{
+      width: 36, height: 36,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      borderRadius: "10px", border: "1.5px solid transparent",
+      background: "transparent",
+      color: histIdx === 0 ? "var(--text-muted)" : "var(--text-secondary)",
+          cursor: histIdx === 0 ? "not-allowed" : "pointer",
+    }}
+    >
+    <Undo size={15} />
+    </button>
+    <button
+    title="Redo (Ctrl+Shift+Z)"
+    onClick={redo}
+    disabled={histIdx >= history.length - 1}
+    style={{
+      width: 36, height: 36,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      borderRadius: "10px", border: "1.5px solid transparent",
+      background: "transparent",
+      color: histIdx >= history.length - 1 ? "var(--text-muted)" : "var(--text-secondary)",
+          cursor: histIdx >= history.length - 1 ? "not-allowed" : "pointer",
+    }}
+    >
+    <Redo size={15} />
+    </button>
+
+    <div style={{ width: "100%", height: 1, background: "var(--border)", margin: "4px 0" }} />
+
+    {/* Clear */}
+    <button
+    title="Clear All"
+    onClick={clearAll}
+    style={{
+      width: 36, height: 36,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      borderRadius: "10px", border: "1.5px solid transparent",
+      background: "transparent", color: "#ff4d4f", cursor: "pointer",
+    }}
+    >
+    <Trash2 size={15} />
+    </button>
+
+    {/* Download */}
+    <button
+    title="Download PNG"
+    onClick={downloadCanvas}
+    style={{
+      width: 36, height: 36,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      borderRadius: "10px", border: "1.5px solid transparent",
+      background: "transparent", color: "var(--text-secondary)", cursor: "pointer",
+    }}
+    >
+    <Download size={15} />
+    </button>
+    </div>
+
+    {/* Top-right: Properties panel */}
+    <div
+    className="absolute right-4 top-4 flex flex-col gap-3 p-3 rounded-2xl"
+    style={{
+      background: "var(--surface)",
+          border: "1px solid var(--border)",
+          boxShadow: "0 8px 40px rgba(0,0,0,0.5)",
+          zIndex: 40,
+          minWidth: 180,
+    }}
+    >
+    {/* Stroke Color */}
+    <div>
+    <p style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "monospace", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em" }}>Stroke</p>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+    {COLORS.map(c => (
+      <button
+      key={c}
+      onClick={() => setColor(c)}
+      style={{
+        width: 20, height: 20,
+        borderRadius: "50%",
+        background: c,
+        border: color === c ? "2px solid white" : "2px solid transparent",
+        cursor: "pointer",
+        boxShadow: color === c ? `0 0 8px ${c}` : "none",
+        transition: "all 0.15s",
+      }}
+      />
+    ))}
+    </div>
+    </div>
+
+    {/* Fill Color */}
+    <div>
+    <p style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "monospace", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em" }}>Fill</p>
+    <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+    {FILLS.map((f, i) => (
+      <button
+      key={i}
+      onClick={() => setFill(f)}
+      title={i === 0 ? "None" : "Fill " + i}
+      style={{
+        width: 20, height: 20,
+        borderRadius: 4,
+        background: f === "transparent" ? "transparent" : f,
+        border: fill === f ? "2px solid var(--accent)" : "1.5px solid var(--border)",
+                          cursor: "pointer",
+                          position: "relative",
+                          overflow: "hidden",
+      }}
+      >
+      {f === "transparent" && (
+        <div style={{
+          position: "absolute", inset: 0,
+          background: "repeating-linear-gradient(45deg, #333 0px, #333 2px, transparent 2px, transparent 8px)",
+        }} />
+      )}
+      </button>
+    ))}
+    </div>
+    </div>
+
+    {/* Stroke Width */}
+    <div>
+    <p style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "monospace", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em" }}>Width</p>
+    <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
+    {STROKE_WIDTHS.map(w => (
+      <button
+      key={w}
+      onClick={() => setStrokeWidth(w)}
+      style={{
+        width: 28, height: 28,
+        borderRadius: 6,
+        border: strokeWidth === w ? "1.5px solid var(--accent)" : "1.5px solid var(--border)",
+                             background: strokeWidth === w ? "var(--accent-dim)" : "transparent",
+                             display: "flex", alignItems: "center", justifyContent: "center",
+                             cursor: "pointer",
+      }}
+      >
+      <div style={{
+        width: 14, height: w,
+        background: strokeWidth === w ? "var(--accent)" : "var(--text-muted)",
+                             borderRadius: 99,
+      }} />
+      </button>
+    ))}
+    </div>
+    </div>
+
+    {/* Zoom */}
+    <div>
+    <p style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "monospace", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em" }}>Zoom</p>
+    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+    <button
+    onClick={() => setZoom(z => Math.max(z * 0.8, 0.2))}
+    style={{ width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--text-secondary)", cursor: "pointer" }}
+    ><ZoomOut size={12} /></button>
+    <span style={{ fontSize: 11, color: "var(--text-secondary)", fontFamily: "monospace", minWidth: 40, textAlign: "center" }}>
+    {Math.round(zoom * 100)}%
+    </span>
+    <button
+    onClick={() => setZoom(z => Math.min(z * 1.2, 5))}
+    style={{ width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--text-secondary)", cursor: "pointer" }}
+    ><ZoomIn size={12} /></button>
+    <button
+    onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}
+    style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "monospace", background: "transparent", border: "none", cursor: "pointer", padding: "0 4px" }}
+    >Reset</button>
+    </div>
+    </div>
+
+    {/* Shapes count */}
+    <div style={{
+      padding: "6px 8px",
+      borderRadius: 8,
+      background: "var(--surface-2)",
+          fontSize: 10,
+          color: "var(--text-muted)",
+          fontFamily: "monospace",
+          display: "flex",
+          justifyContent: "space-between",
+    }}>
+    <span>Shapes</span>
+    <span style={{ color: "var(--accent)", fontWeight: 600 }}>{shapes.length}</span>
+    </div>
+    </div>
+
+    {/* Bottom center: active tool indicator */}
+    <div
+    className="absolute bottom-4 left-1/2 -translate-x-1/2"
+    style={{
+      background: "var(--surface)",
+          border: "1px solid var(--accent-border)",
+          borderRadius: 99,
+          padding: "6px 16px",
+          fontSize: 11,
+          fontFamily: "monospace",
+          color: "var(--accent)",
+          zIndex: 40,
+          boxShadow: "0 0 20px rgba(0,245,160,0.1)",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+    }}
+    >
+    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--accent)", display: "inline-block" }} />
+    {toolButtons.find(t => t.id === tool)?.label?.split(" (")[0] || tool}
+    <span style={{ color: "var(--text-muted)", fontSize: 10 }}>• Scroll to zoom • Alt+drag to pan</span>
+    </div>
+
+    {/* Online indicator (decorative) */}
+    <div
+    className="absolute top-4 left-4 flex items-center gap-2"
+    style={{
+      background: "var(--surface)",
+          border: "1px solid var(--border)",
+          borderRadius: 99,
+          padding: "5px 12px",
+          fontSize: 11,
+          fontFamily: "monospace",
+          color: "var(--text-secondary)",
+          zIndex: 40,
+    }}
+    >
+    <Users size={12} style={{ color: "var(--accent)" }} />
+    <span>You</span>
+    <span style={{ color: "var(--text-muted)" }}>• 1 active</span>
+    </div>
+    </div>
     </div>
   );
 }
