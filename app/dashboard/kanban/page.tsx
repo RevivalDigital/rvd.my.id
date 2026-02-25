@@ -114,6 +114,7 @@ export default function KanbanPage() {
             priority: r.priority,
             type: r.type,
             project: r.project,
+            created_by: r.created_by,
             assignee: assigneeNames[0] || assigneeIds[0],
             assignees: assigneeNames.length ? assigneeNames : assigneeIds,
             created: r.created,
@@ -353,6 +354,30 @@ export default function KanbanPage() {
           }
         );
 
+        try {
+          const newAssigneeIds: string[] = Array.isArray(record.assignee)
+            ? (record.assignee as string[])
+            : record.assignee
+            ? [record.assignee as string]
+            : [];
+          await Promise.all(
+            newAssigneeIds.map((uid) =>
+              pb.collection("notifications").create({
+                title: "Task Assigned",
+                body: `Anda ditugaskan pada task: ${record.title}`,
+                type: "task_assigned",
+                severity: "info",
+                recipient: uid,
+                is_read: false,
+                entity_type: "task",
+                entity_id: record.id,
+              })
+            )
+          );
+        } catch (err) {
+          console.error("Failed to create assignment notifications", err);
+        }
+
         const newTask: Task = {
           id: record.id,
           title: record.title,
@@ -362,6 +387,7 @@ export default function KanbanPage() {
           priority: record.priority,
           type: record.type || undefined,
           project: record.project,
+          created_by: record.created_by,
           assignee: Array.isArray(record.expand?.assignee)
             ? ((record.expand?.assignee[0]?.name as string) ||
                 (record.expand?.assignee[0]?.email as string) ||
@@ -412,6 +438,36 @@ export default function KanbanPage() {
             expand: "assignee,project",
           }
         );
+
+        try {
+          const prevIdsFromExpand = Array.isArray((editingTask.expand as any)?.assignee)
+            ? ((editingTask.expand as any)?.assignee as any[]).map((u) => u.id as string)
+            : (editingTask.expand as any)?.assignee
+            ? [((editingTask.expand as any)?.assignee as any).id as string]
+            : [];
+          const newAssigneeIds: string[] = Array.isArray(record.assignee)
+            ? (record.assignee as string[])
+            : record.assignee
+            ? [record.assignee as string]
+            : [];
+          const added = newAssigneeIds.filter((id) => !prevIdsFromExpand.includes(id));
+          await Promise.all(
+            added.map((uid) =>
+              pb.collection("notifications").create({
+                title: "Task Assigned",
+                body: `Anda ditugaskan pada task: ${record.title}`,
+                type: "task_assigned",
+                severity: "info",
+                recipient: uid,
+                is_read: false,
+                entity_type: "task",
+                entity_id: record.id,
+              })
+            )
+          );
+        } catch (err) {
+          console.error("Failed to create assignment notifications (update)", err);
+        }
 
         setTasks((prev) =>
           prev.map((t) =>
@@ -491,6 +547,13 @@ export default function KanbanPage() {
     } catch (error) {
       console.error("Failed to update checklist", error);
     }
+  };
+
+  const canDeleteTask = (task: Task) => {
+    const model = pb.authStore.model as any;
+    const role = model?.role as string | undefined;
+    const uid = model?.id as string | undefined;
+    return role === "admin" || (!!task.created_by && task.created_by === uid);
   };
 
   return (
@@ -1259,12 +1322,14 @@ export default function KanbanPage() {
               >
                 Edit task
               </button>
-              <button
-                className="w-full text-left px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20"
-                onClick={() => openDeleteConfirm(optionsTask)}
-              >
-                Delete task
-              </button>
+              {canDeleteTask(optionsTask) && (
+                <button
+                  className="w-full text-left px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20"
+                  onClick={() => openDeleteConfirm(optionsTask)}
+                >
+                  Delete task
+                </button>
+              )}
             </div>
             <div className="flex justify-end pt-3">
               <button
