@@ -278,6 +278,30 @@ export default function RootPage() {
                 </div>
               </div>
             </article>
+
+            <article className="card card-hover p-6 flex flex-col md:flex-row gap-6">
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold mb-1">Fidelweiss Capital —</h3>
+                <p className="text-xs uppercase tracking-[0.18em] text-[#00f5a0] mb-3">
+                  Institutional DeFi · Portfolio Management
+                </p>
+                <p className="text-sm text-gray-300 mb-3">
+                  Platform manajemen portofolio aset digital untuk investor institusional, berfokus pada strategi yield farming otomatis dan manajemen risiko yang transparan.
+                </p>
+                <p className="text-xs text-gray-500">
+                  Fokus: investor institusional yang mencari akses aman dan terukur ke ekosistem DeFi.
+                </p>
+              </div>
+              <div className="md:w-64 w-full">
+                <div className="rounded-xl overflow-hidden border border-white/10 bg-[#0f1115] aspect-video">
+                  <img
+                    src="/images/fidelweiss-capital.png"
+                    alt="Tampilan landing page Fidelweiss Capital"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </div>
+            </article>
           </div>
         </section>
       </main>
