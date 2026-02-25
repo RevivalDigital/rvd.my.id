@@ -5,109 +5,63 @@ import Topbar from "@/components/Topbar";
 import {
   Pencil, Square, Circle, Minus, ArrowRight, Type, Hand,
   Eraser, Trash2, Download, Undo, Redo, ZoomIn, ZoomOut,
-  Users, Copy, Share2, Palette, ChevronDown, Diamond,
-  Triangle, StickyNote, MousePointer2
+  Users, Diamond, StickyNote, MousePointer2, ImagePlus,
+  Save, FolderOpen, CheckCircle2,
 } from "lucide-react";
 
-// Rough/hand-drawn utility
-function roughLine(
-  ctx: CanvasRenderingContext2D,
-  x1: number, y1: number, x2: number, y2: number,
-  roughness = 1.5
-) {
-  const dx = x2 - x1;
-  const dy = y2 - y1;
+// ─── Rough drawing helpers ────────────────────────────────────────────────────
+function roughLine(ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number, r = 1.5) {
+  const dx = x2 - x1, dy = y2 - y1;
   const dist = Math.sqrt(dx * dx + dy * dy);
   const steps = Math.max(Math.floor(dist / 8), 1);
   ctx.beginPath();
-  ctx.moveTo(x1 + (Math.random() - 0.5) * roughness, y1 + (Math.random() - 0.5) * roughness);
+  ctx.moveTo(x1 + (Math.random() - 0.5) * r, y1 + (Math.random() - 0.5) * r);
   for (let i = 1; i <= steps; i++) {
     const t = i / steps;
-    const nx = x1 + dx * t + (Math.random() - 0.5) * roughness * 2;
-    const ny = y1 + dy * t + (Math.random() - 0.5) * roughness * 2;
-    ctx.lineTo(nx, ny);
+    ctx.lineTo(x1 + dx * t + (Math.random() - 0.5) * r * 2, y1 + dy * t + (Math.random() - 0.5) * r * 2);
   }
   ctx.stroke();
 }
 
-function roughRect(
-  ctx: CanvasRenderingContext2D,
-  x: number, y: number, w: number, h: number,
-  roughness = 1.5
-) {
-  roughLine(ctx, x, y, x + w, y, roughness);
-  roughLine(ctx, x + w, y, x + w, y + h, roughness);
-  roughLine(ctx, x + w, y + h, x, y + h, roughness);
-  roughLine(ctx, x, y + h, x, y, roughness);
-  // double stroke for hand-drawn feel
-  roughLine(ctx, x, y, x + w, y, roughness * 0.5);
-  roughLine(ctx, x, y + h, x + w, y + h, roughness * 0.5);
+function roughRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r = 1.5) {
+  roughLine(ctx, x, y, x + w, y, r);
+  roughLine(ctx, x + w, y, x + w, y + h, r);
+  roughLine(ctx, x + w, y + h, x, y + h, r);
+  roughLine(ctx, x, y + h, x, y, r);
+  roughLine(ctx, x, y, x + w, y, r * 0.5);
+  roughLine(ctx, x, y + h, x + w, y + h, r * 0.5);
 }
 
-function roughEllipse(
-  ctx: CanvasRenderingContext2D,
-  cx: number, cy: number, rx: number, ry: number,
-  roughness = 1.5
-) {
-  const steps = 60;
+function roughEllipse(ctx: CanvasRenderingContext2D, cx: number, cy: number, rx: number, ry: number, r = 1.5) {
+  const steps = 64;
   ctx.beginPath();
   for (let i = 0; i <= steps; i++) {
-    const angle = (i / steps) * Math.PI * 2;
-    const jitter = (Math.random() - 0.5) * roughness * 2;
-    const nx = cx + (rx + jitter) * Math.cos(angle);
-    const ny = cy + (ry + jitter) * Math.sin(angle);
-    if (i === 0) ctx.moveTo(nx, ny);
-    else ctx.lineTo(nx, ny);
+    const a = (i / steps) * Math.PI * 2;
+    const j = (Math.random() - 0.5) * r * 2;
+    const nx = cx + (rx + j) * Math.cos(a);
+    const ny = cy + (ry + j) * Math.sin(a);
+    i === 0 ? ctx.moveTo(nx, ny) : ctx.lineTo(nx, ny);
   }
   ctx.closePath();
   ctx.stroke();
 }
 
-function roughDiamond(
-  ctx: CanvasRenderingContext2D,
-  cx: number, cy: number, w: number, h: number,
-  roughness = 1.5
-) {
-  const pts = [
-    [cx, cy - h / 2],
-    [cx + w / 2, cy],
-    [cx, cy + h / 2],
-    [cx - w / 2, cy],
-  ];
-  for (let i = 0; i < 4; i++) {
-    const [x1, y1] = pts[i];
-    const [x2, y2] = pts[(i + 1) % 4];
-    roughLine(ctx, x1, y1, x2, y2, roughness);
-  }
+function roughDiamond(ctx: CanvasRenderingContext2D, cx: number, cy: number, w: number, h: number, r = 1.5) {
+  const pts: [number, number][] = [[cx, cy - h / 2], [cx + w / 2, cy], [cx, cy + h / 2], [cx - w / 2, cy]];
+  for (let i = 0; i < 4; i++) roughLine(ctx, pts[i][0], pts[i][1], pts[(i + 1) % 4][0], pts[(i + 1) % 4][1], r);
 }
 
-function roughArrow(
-  ctx: CanvasRenderingContext2D,
-  x1: number, y1: number, x2: number, y2: number,
-  roughness = 1.5
-) {
-  roughLine(ctx, x1, y1, x2, y2, roughness);
+function roughArrow(ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number, r = 1.5) {
+  roughLine(ctx, x1, y1, x2, y2, r);
   const angle = Math.atan2(y2 - y1, x2 - x1);
-  const headLen = 16;
-  roughLine(
-    ctx,
-    x2, y2,
-    x2 - headLen * Math.cos(angle - 0.4),
-            y2 - headLen * Math.sin(angle - 0.4),
-            roughness * 0.7
-  );
-  roughLine(
-    ctx,
-    x2, y2,
-    x2 - headLen * Math.cos(angle + 0.4),
-            y2 - headLen * Math.sin(angle + 0.4),
-            roughness * 0.7
-  );
+  const hl = 16;
+  roughLine(ctx, x2, y2, x2 - hl * Math.cos(angle - 0.4), y2 - hl * Math.sin(angle - 0.4), r * 0.7);
+  roughLine(ctx, x2, y2, x2 - hl * Math.cos(angle + 0.4), y2 - hl * Math.sin(angle + 0.4), r * 0.7);
 }
 
-type Tool = "select" | "pan" | "pencil" | "rect" | "ellipse" | "diamond" | "line" | "arrow" | "text" | "eraser" | "sticky";
-
-type ShapeType = "pencil" | "rect" | "ellipse" | "diamond" | "line" | "arrow" | "text" | "sticky";
+// ─── Types ───────────────────────────────────────────────────────────────────
+type Tool = "select" | "pan" | "pencil" | "rect" | "ellipse" | "diamond" | "line" | "arrow" | "text" | "eraser" | "sticky" | "image";
+type ShapeType = "pencil" | "rect" | "ellipse" | "diamond" | "line" | "arrow" | "text" | "sticky" | "image";
 
 interface Shape {
   id: string;
@@ -116,28 +70,32 @@ interface Shape {
   x2?: number; y2?: number;
   points?: [number, number][];
   text?: string;
+  imageDataUrl?: string;
   color: string;
   strokeWidth: number;
   fill?: string;
   fontSize?: number;
-  selected?: boolean;
   seed: number;
 }
 
-const COLORS = [
-  "#e6edf3", // white/primary
-"#00f5a0", // accent green
-"#1890ff", // blue
-"#ff4d4f", // red
-"#faad14", // yellow
-"#722ed1", // purple
-"#ff7a00", // orange
-"#eb2f96", // pink
-];
+// Image cache — prevents creating new Image() on every redraw frame
+const imageCache = new Map<string, HTMLImageElement>();
 
+function getCachedImage(src: string): HTMLImageElement | null {
+  if (imageCache.has(src)) return imageCache.get(src)!;
+  const img = new Image();
+  img.onload = () => imageCache.set(src, img);
+  img.src = src;
+  return null;
+}
+
+// ─── Constants ───────────────────────────────────────────────────────────────
+const COLORS = ["#e6edf3", "#00f5a0", "#1890ff", "#ff4d4f", "#faad14", "#722ed1", "#ff7a00", "#eb2f96"];
 const STROKE_WIDTHS = [1, 2, 4, 8];
 const FILLS = ["transparent", "rgba(0,245,160,0.08)", "rgba(24,144,255,0.08)", "rgba(255,77,79,0.08)", "rgba(250,173,20,0.08)"];
+const STORAGE_KEY = "rvd_whiteboard_v1";
 
+// ─── Component ────────────────────────────────────────────────────────────────
 export default function WhiteboardPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [tool, setTool] = useState<Tool>("pencil");
@@ -149,20 +107,38 @@ export default function WhiteboardPage() {
   const [histIdx, setHistIdx] = useState(0);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [showColorPicker, setShowColorPicker] = useState(false);
-  const [showFillPicker, setShowFillPicker] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saved">("idle");
 
+  // Text editing
+  const [textActive, setTextActive] = useState(false);
+  const [textScreenPos, setTextScreenPos] = useState({ x: 0, y: 0 });
+  const [textCanvasPos, setTextCanvasPos] = useState({ x: 0, y: 0 });
+  const [textVal, setTextVal] = useState("");
+  const [textTool, setTextTool] = useState<"text" | "sticky">("text");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Drawing refs
   const drawingRef = useRef(false);
   const currentShapeRef = useRef<Shape | null>(null);
-  const lastPosRef = useRef({ x: 0, y: 0 });
   const panStartRef = useRef({ x: 0, y: 0 });
   const isPanningRef = useRef(false);
-  const textInputRef = useRef<HTMLInputElement | null>(null);
-  const textPosRef = useRef({ x: 0, y: 0 });
-  const [editingText, setEditingText] = useState(false);
-  const [textPos, setTextPos] = useState({ x: 0, y: 0 });
-  const [textVal, setTextVal] = useState("");
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const pendingImagePosRef = useRef({ x: 0, y: 0 });
 
+  // Sync history refs to avoid stale closures
+  const histIdxRef = useRef(0);
+  const historyRef = useRef<Shape[][]>([[]]);
+
+  // Focus textarea when text editing activates
+  useEffect(() => {
+    if (textActive) {
+      // Small delay to ensure the textarea is mounted
+      const t = setTimeout(() => textareaRef.current?.focus(), 20);
+      return () => clearTimeout(t);
+    }
+  }, [textActive]);
+
+  // ── Coordinate conversion ──────────────────────────────────────────────────
   const toCanvas = useCallback((clientX: number, clientY: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
@@ -173,25 +149,14 @@ export default function WhiteboardPage() {
     };
   }, [pan, zoom]);
 
+  // ── Draw one shape ─────────────────────────────────────────────────────────
   const drawShape = useCallback((ctx: CanvasRenderingContext2D, shape: Shape) => {
     ctx.save();
     ctx.strokeStyle = shape.color;
     ctx.lineWidth = shape.strokeWidth;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
-    // Simulate hand-drawn font
-    ctx.font = `${shape.fontSize || 18}px 'DM Mono', 'Caveat', cursive`;
-
     const roughness = 1.2 + (shape.seed % 10) * 0.08;
-
-    if (shape.selected) {
-      ctx.shadowColor = "rgba(0,245,160,0.5)";
-      ctx.shadowBlur = 8;
-    }
-
-    if (shape.fill && shape.fill !== "transparent" && shape.type !== "pencil" && shape.type !== "line" && shape.type !== "arrow") {
-      ctx.fillStyle = shape.fill;
-    }
 
     switch (shape.type) {
       case "pencil":
@@ -201,55 +166,48 @@ export default function WhiteboardPage() {
           for (let i = 1; i < shape.points.length; i++) {
             const prev = shape.points[i - 1];
             const curr = shape.points[i];
-            const mx = (prev[0] + curr[0]) / 2;
-            const my = (prev[1] + curr[1]) / 2;
-            ctx.quadraticCurveTo(prev[0], prev[1], mx, my);
+            ctx.quadraticCurveTo(prev[0], prev[1], (prev[0] + curr[0]) / 2, (prev[1] + curr[1]) / 2);
           }
           ctx.stroke();
         }
         break;
 
       case "rect": {
-        const x = Math.min(shape.x, shape.x2 ?? shape.x);
-        const y = Math.min(shape.y, shape.y2 ?? shape.y);
-        const w = Math.abs((shape.x2 ?? shape.x) - shape.x);
-        const h = Math.abs((shape.y2 ?? shape.y) - shape.y);
-        if (shape.fill !== "transparent") {
-          ctx.fillRect(x, y, w, h);
-        }
-        roughRect(ctx, x, y, w, h, roughness);
+        const rx = Math.min(shape.x, shape.x2 ?? shape.x);
+        const ry = Math.min(shape.y, shape.y2 ?? shape.y);
+        const rw = Math.abs((shape.x2 ?? shape.x) - shape.x);
+        const rh = Math.abs((shape.y2 ?? shape.y) - shape.y);
+        if (shape.fill && shape.fill !== "transparent") { ctx.fillStyle = shape.fill; ctx.fillRect(rx, ry, rw, rh); }
+        roughRect(ctx, rx, ry, rw, rh, roughness);
         break;
       }
 
       case "ellipse": {
-        const cx = (shape.x + (shape.x2 ?? shape.x)) / 2;
-        const cy = (shape.y + (shape.y2 ?? shape.y)) / 2;
-        const rx = Math.abs((shape.x2 ?? shape.x) - shape.x) / 2;
-        const ry = Math.abs((shape.y2 ?? shape.y) - shape.y) / 2;
-        if (shape.fill !== "transparent") {
-          ctx.beginPath();
-          ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
-          ctx.fill();
+        const ecx = (shape.x + (shape.x2 ?? shape.x)) / 2;
+        const ecy = (shape.y + (shape.y2 ?? shape.y)) / 2;
+        const erx = Math.abs((shape.x2 ?? shape.x) - shape.x) / 2;
+        const ery = Math.abs((shape.y2 ?? shape.y) - shape.y) / 2;
+        if (shape.fill && shape.fill !== "transparent") {
+          ctx.fillStyle = shape.fill;
+          ctx.beginPath(); ctx.ellipse(ecx, ecy, erx, ery, 0, 0, Math.PI * 2); ctx.fill();
         }
-        roughEllipse(ctx, cx, cy, rx, ry, roughness);
+        roughEllipse(ctx, ecx, ecy, erx, ery, roughness);
         break;
       }
 
       case "diamond": {
-        const cx2 = (shape.x + (shape.x2 ?? shape.x)) / 2;
-        const cy2 = (shape.y + (shape.y2 ?? shape.y)) / 2;
-        const w2 = Math.abs((shape.x2 ?? shape.x) - shape.x);
-        const h2 = Math.abs((shape.y2 ?? shape.y) - shape.y);
-        if (shape.fill !== "transparent") {
+        const dcx = (shape.x + (shape.x2 ?? shape.x)) / 2;
+        const dcy = (shape.y + (shape.y2 ?? shape.y)) / 2;
+        const dw = Math.abs((shape.x2 ?? shape.x) - shape.x);
+        const dh = Math.abs((shape.y2 ?? shape.y) - shape.y);
+        if (shape.fill && shape.fill !== "transparent") {
+          ctx.fillStyle = shape.fill;
           ctx.beginPath();
-          ctx.moveTo(cx2, shape.y);
-          ctx.lineTo(shape.x2 ?? shape.x, cy2);
-          ctx.lineTo(cx2, shape.y2 ?? shape.y);
-          ctx.lineTo(shape.x, cy2);
-          ctx.closePath();
-          ctx.fill();
+          ctx.moveTo(dcx, shape.y); ctx.lineTo(shape.x2 ?? shape.x, dcy);
+          ctx.lineTo(dcx, shape.y2 ?? shape.y); ctx.lineTo(shape.x, dcy);
+          ctx.closePath(); ctx.fill();
         }
-        roughDiamond(ctx, cx2, cy2, w2, h2, roughness);
+        roughDiamond(ctx, dcx, dcy, dw, dh, roughness);
         break;
       }
 
@@ -264,42 +222,54 @@ export default function WhiteboardPage() {
       case "text":
         if (shape.text) {
           ctx.fillStyle = shape.color;
-          // Hand-drawn text with slight jitter
+          ctx.font = `${shape.fontSize || 18}px 'DM Mono', monospace`;
+          ctx.textBaseline = "top";
           shape.text.split("\n").forEach((line, i) => {
-            ctx.fillText(line, shape.x + (Math.random() - 0.5) * 0.3, shape.y + i * (shape.fontSize || 18) * 1.4 + (Math.random() - 0.5) * 0.3);
+            ctx.fillText(line, shape.x, shape.y + i * (shape.fontSize || 18) * 1.5);
           });
         }
         break;
 
       case "sticky": {
-        const sw = 180;
-        const sh = 140;
-        const sColor = (shape.fill && shape.fill !== "transparent") ? shape.fill : "rgba(250,173,20,0.15)";
-        ctx.fillStyle = sColor;
-        ctx.shadowColor = "rgba(0,0,0,0.3)";
-        ctx.shadowBlur = 8;
-        ctx.shadowOffsetY = 4;
-        // Slightly rotated sticky
+        const sw = 200, sh = 150;
         ctx.save();
         ctx.translate(shape.x + sw / 2, shape.y + sh / 2);
         ctx.rotate(((shape.seed % 5) - 2) * 0.015);
+        ctx.fillStyle = (shape.fill && shape.fill !== "transparent") ? shape.fill : "rgba(250,173,20,0.18)";
+        ctx.shadowColor = "rgba(0,0,0,0.35)";
+        ctx.shadowBlur = 10; ctx.shadowOffsetY = 5;
         ctx.fillRect(-sw / 2, -sh / 2, sw, sh);
-        roughRect(ctx, -sw / 2, -sh / 2, sw, sh, roughness * 0.5);
         ctx.shadowBlur = 0;
+        roughRect(ctx, -sw / 2, -sh / 2, sw, sh, roughness * 0.5);
         ctx.fillStyle = shape.color;
         ctx.font = `14px 'DM Mono', monospace`;
-        const lines = (shape.text || "Note...").split("\n");
-        lines.forEach((line, li) => {
-          ctx.fillText(line, -sw / 2 + 12, -sh / 2 + 28 + li * 20);
+        ctx.textBaseline = "top";
+        (shape.text || "Note...").split("\n").forEach((line, li) => {
+          ctx.fillText(line, -sw / 2 + 12, -sh / 2 + 16 + li * 20);
         });
         ctx.restore();
         break;
       }
-    }
 
+      case "image": {
+        if (shape.imageDataUrl) {
+          const img = getCachedImage(shape.imageDataUrl);
+          if (img && img.complete && img.naturalWidth > 0) {
+            const iw = Math.abs((shape.x2 ?? shape.x) - shape.x) || img.naturalWidth;
+            const ih = Math.abs((shape.y2 ?? shape.y) - shape.y) || img.naturalHeight;
+            const ix = Math.min(shape.x, shape.x2 ?? shape.x);
+            const iy = Math.min(shape.y, shape.y2 ?? shape.y);
+            ctx.drawImage(img, ix, iy, iw, ih);
+            roughRect(ctx, ix, iy, iw, ih, roughness * 0.6);
+          }
+        }
+        break;
+      }
+    }
     ctx.restore();
   }, []);
 
+  // ── Redraw full canvas ─────────────────────────────────────────────────────
   const redraw = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -308,70 +278,122 @@ export default function WhiteboardPage() {
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Draw grid
+    // Grid background
     ctx.save();
-    ctx.translate(pan.x % (20 * zoom), pan.y % (20 * zoom));
+    const gs = 20 * zoom;
+    const ox = ((pan.x % gs) + gs) % gs;
+    const oy = ((pan.y % gs) + gs) % gs;
+    ctx.translate(ox, oy);
     ctx.strokeStyle = "rgba(255,255,255,0.025)";
     ctx.lineWidth = 1;
-    const gridSize = 20 * zoom;
-    for (let x = -gridSize; x < canvas.width + gridSize; x += gridSize) {
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
-    }
-    for (let y = -gridSize; y < canvas.height + gridSize; y += gridSize) {
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
-    }
+    for (let x = -gs; x < canvas.width + gs; x += gs) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
+    for (let y = -gs; y < canvas.height + gs; y += gs) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
     ctx.restore();
 
     ctx.save();
     ctx.translate(pan.x, pan.y);
     ctx.scale(zoom, zoom);
-
-    shapes.forEach(shape => drawShape(ctx, shape));
+    shapes.forEach(s => drawShape(ctx, s));
     if (currentShapeRef.current) drawShape(ctx, currentShapeRef.current);
-
     ctx.restore();
   }, [shapes, pan, zoom, drawShape]);
 
   useEffect(() => { redraw(); }, [redraw]);
 
+  // Resize observer
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const resize = () => {
-      canvas.width = canvas.offsetWidth;
-      canvas.height = canvas.offsetHeight;
-      redraw();
-    };
+    const resize = () => { canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; redraw(); };
     resize();
-    window.addEventListener("resize", resize);
-    return () => window.removeEventListener("resize", resize);
+    const ro = new ResizeObserver(resize);
+    ro.observe(canvas);
+    return () => ro.disconnect();
   }, [redraw]);
 
-  const pushHistory = useCallback((newShapes: Shape[]) => {
-    setHistory(prev => {
-      const newHist = prev.slice(0, histIdx + 1);
-      newHist.push([...newShapes]);
-      setHistIdx(newHist.length - 1);
-      return newHist;
-    });
-  }, [histIdx]);
+  // ── History management ─────────────────────────────────────────────────────
+  const pushHistory = useCallback((next: Shape[]) => {
+    const newHist = historyRef.current.slice(0, histIdxRef.current + 1);
+    newHist.push([...next]);
+    historyRef.current = newHist;
+    histIdxRef.current = newHist.length - 1;
+    setHistory([...newHist]);
+    setHistIdx(histIdxRef.current);
+  }, []);
 
   const undo = useCallback(() => {
-    if (histIdx > 0) {
-      const newIdx = histIdx - 1;
-      setHistIdx(newIdx);
-      setShapes([...history[newIdx]]);
+    if (histIdxRef.current > 0) {
+      histIdxRef.current--;
+      setHistIdx(histIdxRef.current);
+      setShapes([...historyRef.current[histIdxRef.current]]);
     }
-  }, [histIdx, history]);
+  }, []);
 
   const redo = useCallback(() => {
-    if (histIdx < history.length - 1) {
-      const newIdx = histIdx + 1;
-      setHistIdx(newIdx);
-      setShapes([...history[newIdx]]);
+    if (histIdxRef.current < historyRef.current.length - 1) {
+      histIdxRef.current++;
+      setHistIdx(histIdxRef.current);
+      setShapes([...historyRef.current[histIdxRef.current]]);
     }
-  }, [histIdx, history]);
+  }, []);
 
+  // ── Text commit ────────────────────────────────────────────────────────────
+  const commitText = useCallback(() => {
+    setTextActive(false);
+    const val = textVal.trim();
+    if (!val) { setTextVal(""); return; }
+    const newShape: Shape = {
+      id: Math.random().toString(36).slice(2),
+                                 type: textTool === "sticky" ? "sticky" : "text",
+                                 x: textCanvasPos.x,
+                                 y: textCanvasPos.y,
+                                 text: val,
+                                 color,
+                                 strokeWidth,
+                                 fill,
+                                 fontSize: 18,
+                                 seed: Math.floor(Math.random() * 100),
+    };
+    setShapes(prev => { const next = [...prev, newShape]; pushHistory(next); return next; });
+    setTextVal("");
+  }, [textVal, textTool, textCanvasPos, color, strokeWidth, fill, pushHistory]);
+
+  // ── Image insert ───────────────────────────────────────────────────────────
+  const handleImageFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const dataUrl = ev.target?.result as string;
+      if (!dataUrl) return;
+      const img = new Image();
+      img.onload = () => {
+        imageCache.set(dataUrl, img);
+        const maxW = 400, maxH = 300;
+        let w = img.naturalWidth, h = img.naturalHeight;
+        if (w > maxW) { h = h * maxW / w; w = maxW; }
+        if (h > maxH) { w = w * maxH / h; h = maxH; }
+        const pos = pendingImagePosRef.current;
+        const newShape: Shape = {
+          id: Math.random().toString(36).slice(2),
+                                            type: "image",
+                                            x: pos.x, y: pos.y,
+                                            x2: pos.x + w, y2: pos.y + h,
+                                            imageDataUrl: dataUrl,
+                                            color: "#e6edf3",
+                                            strokeWidth: 1,
+                                            fill: "transparent",
+                                            seed: Math.floor(Math.random() * 100),
+        };
+        setShapes(prev => { const next = [...prev, newShape]; pushHistory(next); return next; });
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  }, [pushHistory]);
+
+  // ── Mouse handlers ─────────────────────────────────────────────────────────
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button !== 0) return;
     const pos = toCanvas(e.clientX, e.clientY);
@@ -383,14 +405,8 @@ export default function WhiteboardPage() {
     }
 
     if (tool === "eraser") {
-      // Remove shape at pos
       setShapes(prev => {
-        const next = prev.filter(s => {
-          const dx = (s.x2 ?? s.x) - s.x;
-          const dy = (s.y2 ?? s.y) - s.y;
-          const dist = Math.sqrt((pos.x - s.x) ** 2 + (pos.y - s.y) ** 2);
-          return dist > 20;
-        });
+        const next = prev.filter(s => Math.sqrt((pos.x - s.x) ** 2 + (pos.y - s.y) ** 2) > 24);
         pushHistory(next);
         return next;
       });
@@ -398,30 +414,31 @@ export default function WhiteboardPage() {
     }
 
     if (tool === "text" || tool === "sticky") {
-      const canvasEl = canvasRef.current;
-      if (!canvasEl) return;
-      const rect = canvasEl.getBoundingClientRect();
-      const screenX = e.clientX - rect.left;
-      const screenY = e.clientY - rect.top;
-      setTextPos({ x: screenX, y: screenY });
-      textPosRef.current = pos;
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      setTextScreenPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+      setTextCanvasPos(pos);
+      setTextTool(tool as "text" | "sticky");
       setTextVal("");
-      setEditingText(true);
+      setTextActive(true);
+      return;
+    }
+
+    if (tool === "image") {
+      pendingImagePosRef.current = pos;
+      imageInputRef.current?.click();
       return;
     }
 
     drawingRef.current = true;
-    lastPosRef.current = pos;
-
     const newShape: Shape = {
       id: Math.random().toString(36).slice(2),
                                       type: tool as ShapeType,
                                       x: pos.x, y: pos.y,
                                       x2: pos.x, y2: pos.y,
                                       points: tool === "pencil" ? [[pos.x, pos.y]] : undefined,
-                                      color,
-                                      strokeWidth,
-                                      fill,
+                                      color, strokeWidth, fill,
                                       fontSize: 18,
                                       seed: Math.floor(Math.random() * 100),
     };
@@ -434,17 +451,10 @@ export default function WhiteboardPage() {
       return;
     }
     if (!drawingRef.current || !currentShapeRef.current) return;
-
     const pos = toCanvas(e.clientX, e.clientY);
-    const shape = currentShapeRef.current;
-
-    if (shape.type === "pencil") {
-      shape.points = [...(shape.points || []), [pos.x, pos.y]];
-    } else {
-      shape.x2 = pos.x;
-      shape.y2 = pos.y;
-    }
-
+    const s = currentShapeRef.current;
+    if (s.type === "pencil") s.points = [...(s.points || []), [pos.x, pos.y]];
+    else { s.x2 = pos.x; s.y2 = pos.y; }
     redraw();
   }, [toCanvas, redraw]);
 
@@ -452,61 +462,88 @@ export default function WhiteboardPage() {
     isPanningRef.current = false;
     if (!drawingRef.current || !currentShapeRef.current) return;
     drawingRef.current = false;
-
     const shape = currentShapeRef.current;
     currentShapeRef.current = null;
-
-    setShapes(prev => {
-      const next = [...prev, shape];
-      pushHistory(next);
-      return next;
-    });
+    setShapes(prev => { const next = [...prev, shape]; pushHistory(next); return next; });
   }, [pushHistory]);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
-    const factor = e.deltaY < 0 ? 1.1 : 0.9;
-    setZoom(prev => Math.min(Math.max(prev * factor, 0.2), 5));
+    setZoom(prev => Math.min(Math.max(prev * (e.deltaY < 0 ? 1.1 : 0.9), 0.2), 5));
   }, []);
 
-  const commitText = useCallback(() => {
-    if (!textVal.trim()) { setEditingText(false); return; }
-    const pos = textPosRef.current;
-    const newShape: Shape = {
-      id: Math.random().toString(36).slice(2),
-                                 type: tool === "sticky" ? "sticky" : "text",
-                                 x: pos.x, y: pos.y,
-                                 text: textVal,
-                                 color,
-                                 strokeWidth,
-                                 fill,
-                                 fontSize: 18,
-                                 seed: Math.floor(Math.random() * 100),
-    };
-    setShapes(prev => {
-      const next = [...prev, newShape];
-      pushHistory(next);
-      return next;
-    });
-    setEditingText(false);
-    setTextVal("");
-  }, [textVal, tool, color, strokeWidth, fill, pushHistory]);
+  // ── Save / Load ────────────────────────────────────────────────────────────
+  const saveBoard = useCallback(() => {
+    try {
+      // Don't store imageDataUrl in localStorage if too large — store everything else
+      const shapesToSave = shapes.map(s => ({ ...s }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ shapes: shapesToSave, pan, zoom }));
+      setSaveStatus("saved");
+      setTimeout(() => setSaveStatus("idle"), 2500);
+    } catch (err) {
+      console.error("Save failed", err);
+    }
+  }, [shapes, pan, zoom]);
 
-  const clearAll = () => {
-    setShapes([]);
-    pushHistory([]);
-  };
+  const loadBoard = useCallback(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      if (Array.isArray(data.shapes)) {
+        // Re-cache images
+        data.shapes.forEach((s: Shape) => {
+          if (s.imageDataUrl && !imageCache.has(s.imageDataUrl)) {
+            const img = new Image();
+            img.onload = () => imageCache.set(s.imageDataUrl!, img);
+            img.src = s.imageDataUrl;
+          }
+        });
+        setShapes(data.shapes);
+        pushHistory(data.shapes);
+      }
+      if (data.pan) setPan(data.pan);
+      if (typeof data.zoom === "number") setZoom(data.zoom);
+    } catch (err) {
+      console.error("Load failed", err);
+    }
+  }, [pushHistory]);
 
-  const downloadCanvas = () => {
+  // Auto-load on mount
+  useEffect(() => { loadBoard(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const exportPNG = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const link = document.createElement("a");
-    link.download = "whiteboard.png";
-    link.href = canvas.toDataURL();
+    link.download = `whiteboard-${Date.now()}.png`;
+    link.href = canvas.toDataURL("image/png");
     link.click();
-  };
+  }, []);
 
-  const toolButtons: { id: Tool; icon: React.ComponentType<any>; label: string }[] = [
+  const clearAll = useCallback(() => { setShapes([]); pushHistory([]); }, [pushHistory]);
+
+  // ── Keyboard shortcuts ─────────────────────────────────────────────────────
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (textActive) return;
+      const map: Record<string, Tool> = {
+        v: "select", h: "pan", p: "pencil", l: "line",
+        a: "arrow", r: "rect", e: "ellipse", d: "diamond",
+        t: "text", x: "eraser", i: "image",
+      };
+      if (!e.ctrlKey && !e.metaKey && map[e.key]) setTool(map[e.key] as Tool);
+      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) { e.preventDefault(); undo(); }
+      if ((e.ctrlKey || e.metaKey) && e.key === "z" && e.shiftKey) { e.preventDefault(); redo(); }
+      if ((e.ctrlKey || e.metaKey) && e.key === "y") { e.preventDefault(); redo(); }
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); saveBoard(); }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [textActive, undo, redo, saveBoard]);
+
+  // ── Tool buttons ───────────────────────────────────────────────────────────
+  const toolButtons: { id: Tool; icon: React.ComponentType<{ size?: number }>; label: string }[] = [
     { id: "select", icon: MousePointer2, label: "Select (V)" },
     { id: "pan", icon: Hand, label: "Pan (H)" },
     { id: "pencil", icon: Pencil, label: "Draw (P)" },
@@ -517,37 +554,28 @@ export default function WhiteboardPage() {
     { id: "diamond", icon: Diamond, label: "Diamond (D)" },
     { id: "text", icon: Type, label: "Text (T)" },
     { id: "sticky", icon: StickyNote, label: "Sticky Note" },
+    { id: "image", icon: ImagePlus, label: "Image (I)" },
     { id: "eraser", icon: Eraser, label: "Eraser (X)" },
   ];
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (editingText) return;
-      const map: Record<string, Tool> = {
-        v: "select", h: "pan", p: "pencil", l: "line",
-        a: "arrow", r: "rect", e: "ellipse", d: "diamond",
-        t: "text", x: "eraser",
-      };
-      if (map[e.key]) setTool(map[e.key] as Tool);
-      if (e.key === "z" && (e.ctrlKey || e.metaKey) && !e.shiftKey) { e.preventDefault(); undo(); }
-      if (e.key === "z" && (e.ctrlKey || e.metaKey) && e.shiftKey) { e.preventDefault(); redo(); }
-      if (e.key === "y" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); redo(); }
-      if (e.key === "Delete" || e.key === "Backspace") {
-        setShapes(prev => { const next = prev.filter(s => !s.selected); pushHistory(next); return next; });
-      }
-    };
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [editingText, undo, redo, pushHistory]);
+  const cursor =
+  tool === "pan" ? "grab" :
+  tool === "eraser" ? "cell" :
+  tool === "text" || tool === "sticky" ? "text" :
+  tool === "image" ? "copy" : "crosshair";
 
-  const cursorStyle = tool === "pan" ? "grab" : tool === "eraser" ? "crosshair" : tool === "text" ? "text" : "crosshair";
-
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col h-screen overflow-hidden">
-    <Topbar
-    title="Whiteboard"
-    subtitle="Collaborative hand-drawn sketching"
+    <Topbar title="Whiteboard" subtitle="Collaborative hand-drawn sketching" />
+
+    {/* Hidden image file input */}
+    <input
+    ref={imageInputRef}
+    type="file"
+    accept="image/*"
+    style={{ display: "none" }}
+    onChange={handleImageFileChange}
     />
 
     <div className="flex flex-1 overflow-hidden relative">
@@ -555,11 +583,7 @@ export default function WhiteboardPage() {
     <canvas
     ref={canvasRef}
     className="flex-1 w-full h-full"
-    style={{
-      background: "var(--bg)",
-          cursor: cursorStyle,
-          touchAction: "none",
-    }}
+    style={{ background: "var(--bg)", cursor, touchAction: "none" }}
     onMouseDown={handleMouseDown}
     onMouseMove={handleMouseMove}
     onMouseUp={handleMouseUp}
@@ -567,48 +591,67 @@ export default function WhiteboardPage() {
     onWheel={handleWheel}
     />
 
-    {/* Text input overlay */}
-    {editingText && (
+    {/* ── Text / Sticky textarea overlay ── */}
+    {textActive && (
       <div
       style={{
         position: "absolute",
-        left: textPos.x,
-        top: textPos.y,
-        zIndex: 50,
+        left: textScreenPos.x,
+        top: textScreenPos.y,
+        zIndex: 60,
+        pointerEvents: "auto",
       }}
       >
       <textarea
-      autoFocus
+      ref={textareaRef}
       value={textVal}
       onChange={e => setTextVal(e.target.value)}
-      onBlur={commitText}
       onKeyDown={e => {
-        if (e.key === "Escape") { setEditingText(false); }
-        if (e.key === "Enter" && !e.shiftKey && tool === "text") { e.preventDefault(); commitText(); }
+        if (e.key === "Escape") { setTextActive(false); setTextVal(""); }
+        if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); commitText(); }
+        if (e.key === "Enter" && !e.shiftKey && textTool === "text") { e.preventDefault(); commitText(); }
       }}
       style={{
-        background: "rgba(13,17,23,0.85)",
-                     border: "2px dashed var(--accent)",
-                     color: color,
-                     fontFamily: "'DM Mono', monospace",
-                     fontSize: "18px",
-                     padding: "6px 10px",
-                     borderRadius: "6px",
-                     minWidth: "120px",
-                     minHeight: tool === "sticky" ? "100px" : "36px",
-                     outline: "none",
-                     resize: "both",
-                     lineHeight: 1.5,
+        background: textTool === "sticky" ? "rgba(250,173,20,0.18)" : "rgba(13,17,23,0.92)",
+                    border: "2px dashed var(--accent)",
+                    color: color,
+                    fontFamily: "'DM Mono', monospace",
+                    fontSize: textTool === "sticky" ? "14px" : "18px",
+                    padding: "8px 12px",
+                    borderRadius: textTool === "sticky" ? "4px" : "6px",
+                    minWidth: textTool === "sticky" ? "200px" : "140px",
+                    minHeight: textTool === "sticky" ? "150px" : "44px",
+                    outline: "none",
+                    resize: "both",
+                    lineHeight: 1.5,
+                    display: "block",
       }}
-      placeholder={tool === "sticky" ? "Write note..." : "Type text..."}
+      placeholder={textTool === "sticky" ? "Write note..." : "Type text..."}
       />
-      <div style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "4px", fontFamily: "monospace" }}>
-      {tool === "text" ? "Enter to confirm • Esc to cancel" : "Click away to confirm"}
-      </div>
-      </div>
+      <div style={{
+        fontSize: "10px", color: "var(--text-muted)", marginTop: "4px",
+                    fontFamily: "monospace", userSelect: "none",
+                    background: "rgba(13,17,23,0.85)", padding: "2px 8px", borderRadius: 4,
+      }}>
+      {textTool === "text"
+        ? "Enter = confirm • Shift+Enter = new line • Esc = cancel"
+        : "Ctrl+Enter = confirm • Shift+Enter = new line • Esc = cancel"}
+        </div>
+        <button
+        onClick={commitText}
+        style={{
+          marginTop: 6, padding: "5px 16px", borderRadius: 6,
+          background: "var(--accent)", color: "black",
+                    fontSize: 12, fontFamily: "monospace", fontWeight: 700,
+                    border: "none", cursor: "pointer", display: "block",
+        }}
+        >
+        ✓ Insert
+        </button>
+        </div>
     )}
 
-    {/* Left: Tool palette */}
+    {/* ── Left: Tool palette ── */}
     <div
     className="absolute left-4 top-1/2 -translate-y-1/2 flex flex-col gap-1 p-2 rounded-2xl"
     style={{
@@ -622,22 +665,16 @@ export default function WhiteboardPage() {
       <button
       key={id}
       title={label}
-      onClick={() => setTool(id)}
+      onClick={() => { setTool(id); if (textActive) { setTextActive(false); setTextVal(""); } }}
       style={{
-        width: 36,
-        height: 36,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
+        width: 36, height: 36,
+        display: "flex", alignItems: "center", justifyContent: "center",
         borderRadius: "10px",
         border: tool === id ? "1.5px solid var(--accent-border)" : "1.5px solid transparent",
                                                      background: tool === id ? "var(--accent-dim)" : "transparent",
                                                      color: tool === id ? "var(--accent)" : "var(--text-secondary)",
-                                                     cursor: "pointer",
-                                                     transition: "all 0.15s",
+                                                     cursor: "pointer", transition: "all 0.15s",
       }}
-      onMouseEnter={e => { if (tool !== id) (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.06)"; }}
-      onMouseLeave={e => { if (tool !== id) (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
       >
       <Icon size={16} />
       </button>
@@ -645,154 +682,86 @@ export default function WhiteboardPage() {
 
     <div style={{ width: "100%", height: 1, background: "var(--border)", margin: "4px 0" }} />
 
-    {/* Undo / Redo */}
-    <button
-    title="Undo (Ctrl+Z)"
-    onClick={undo}
-    disabled={histIdx === 0}
-    style={{
-      width: 36, height: 36,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      borderRadius: "10px", border: "1.5px solid transparent",
-      background: "transparent",
-      color: histIdx === 0 ? "var(--text-muted)" : "var(--text-secondary)",
-          cursor: histIdx === 0 ? "not-allowed" : "pointer",
-    }}
-    >
-    <Undo size={15} />
-    </button>
-    <button
-    title="Redo (Ctrl+Shift+Z)"
-    onClick={redo}
-    disabled={histIdx >= history.length - 1}
-    style={{
-      width: 36, height: 36,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      borderRadius: "10px", border: "1.5px solid transparent",
-      background: "transparent",
-      color: histIdx >= history.length - 1 ? "var(--text-muted)" : "var(--text-secondary)",
-          cursor: histIdx >= history.length - 1 ? "not-allowed" : "pointer",
-    }}
-    >
-    <Redo size={15} />
-    </button>
+    <button title="Undo (Ctrl+Z)" onClick={undo} disabled={histIdx === 0}
+    style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "10px", border: "1.5px solid transparent", background: "transparent", color: histIdx === 0 ? "var(--text-muted)" : "var(--text-secondary)", cursor: histIdx === 0 ? "not-allowed" : "pointer" }}
+    ><Undo size={15} /></button>
+
+    <button title="Redo (Ctrl+Shift+Z)" onClick={redo} disabled={histIdx >= history.length - 1}
+    style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "10px", border: "1.5px solid transparent", background: "transparent", color: histIdx >= history.length - 1 ? "var(--text-muted)" : "var(--text-secondary)", cursor: histIdx >= history.length - 1 ? "not-allowed" : "pointer" }}
+    ><Redo size={15} /></button>
 
     <div style={{ width: "100%", height: 1, background: "var(--border)", margin: "4px 0" }} />
 
-    {/* Clear */}
-    <button
-    title="Clear All"
-    onClick={clearAll}
-    style={{
-      width: 36, height: 36,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      borderRadius: "10px", border: "1.5px solid transparent",
-      background: "transparent", color: "#ff4d4f", cursor: "pointer",
-    }}
-    >
-    <Trash2 size={15} />
-    </button>
+    <button title="Save to browser (Ctrl+S)" onClick={saveBoard}
+    style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "10px", border: "1.5px solid transparent", background: saveStatus === "saved" ? "var(--accent-dim)" : "transparent", color: saveStatus === "saved" ? "var(--accent)" : "var(--text-secondary)", cursor: "pointer", transition: "all 0.3s" }}
+    >{saveStatus === "saved" ? <CheckCircle2 size={15} /> : <Save size={15} />}</button>
 
-    {/* Download */}
-    <button
-    title="Download PNG"
-    onClick={downloadCanvas}
-    style={{
-      width: 36, height: 36,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      borderRadius: "10px", border: "1.5px solid transparent",
-      background: "transparent", color: "var(--text-secondary)", cursor: "pointer",
-    }}
-    >
-    <Download size={15} />
-    </button>
+    <button title="Load saved board" onClick={loadBoard}
+    style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "10px", border: "1.5px solid transparent", background: "transparent", color: "var(--text-secondary)", cursor: "pointer" }}
+    ><FolderOpen size={15} /></button>
+
+    <button title="Export as PNG" onClick={exportPNG}
+    style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "10px", border: "1.5px solid transparent", background: "transparent", color: "var(--text-secondary)", cursor: "pointer" }}
+    ><Download size={15} /></button>
+
+    <button title="Clear All" onClick={clearAll}
+    style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "10px", border: "1.5px solid transparent", background: "transparent", color: "#ff4d4f", cursor: "pointer" }}
+    ><Trash2 size={15} /></button>
     </div>
 
-    {/* Top-right: Properties panel */}
+    {/* ── Right: Properties panel ── */}
     <div
     className="absolute right-4 top-4 flex flex-col gap-3 p-3 rounded-2xl"
     style={{
-      background: "var(--surface)",
-          border: "1px solid var(--border)",
-          boxShadow: "0 8px 40px rgba(0,0,0,0.5)",
-          zIndex: 40,
-          minWidth: 180,
+      background: "var(--surface)", border: "1px solid var(--border)",
+          boxShadow: "0 8px 40px rgba(0,0,0,0.5)", zIndex: 40, minWidth: 186,
     }}
     >
-    {/* Stroke Color */}
+    {/* Stroke color */}
     <div>
     <p style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "monospace", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em" }}>Stroke</p>
     <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
     {COLORS.map(c => (
-      <button
-      key={c}
-      onClick={() => setColor(c)}
-      style={{
-        width: 20, height: 20,
-        borderRadius: "50%",
-        background: c,
+      <button key={c} onClick={() => setColor(c)} style={{
+        width: 20, height: 20, borderRadius: "50%", background: c,
         border: color === c ? "2px solid white" : "2px solid transparent",
-        cursor: "pointer",
-        boxShadow: color === c ? `0 0 8px ${c}` : "none",
-        transition: "all 0.15s",
-      }}
-      />
+        cursor: "pointer", boxShadow: color === c ? `0 0 8px ${c}` : "none", transition: "all 0.15s",
+      }} />
     ))}
     </div>
     </div>
 
-    {/* Fill Color */}
+    {/* Fill */}
     <div>
     <p style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "monospace", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em" }}>Fill</p>
     <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
     {FILLS.map((f, i) => (
-      <button
-      key={i}
-      onClick={() => setFill(f)}
-      title={i === 0 ? "None" : "Fill " + i}
-      style={{
-        width: 20, height: 20,
-        borderRadius: 4,
+      <button key={i} onClick={() => setFill(f)} title={i === 0 ? "None" : "Fill"} style={{
+        width: 20, height: 20, borderRadius: 4,
         background: f === "transparent" ? "transparent" : f,
         border: fill === f ? "2px solid var(--accent)" : "1.5px solid var(--border)",
-                          cursor: "pointer",
-                          position: "relative",
-                          overflow: "hidden",
-      }}
-      >
+                          cursor: "pointer", position: "relative", overflow: "hidden",
+      }}>
       {f === "transparent" && (
-        <div style={{
-          position: "absolute", inset: 0,
-          background: "repeating-linear-gradient(45deg, #333 0px, #333 2px, transparent 2px, transparent 8px)",
-        }} />
+        <div style={{ position: "absolute", inset: 0, background: "repeating-linear-gradient(45deg, #333 0px, #333 2px, transparent 2px, transparent 8px)" }} />
       )}
       </button>
     ))}
     </div>
     </div>
 
-    {/* Stroke Width */}
+    {/* Stroke width */}
     <div>
     <p style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "monospace", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em" }}>Width</p>
     <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
     {STROKE_WIDTHS.map(w => (
-      <button
-      key={w}
-      onClick={() => setStrokeWidth(w)}
-      style={{
-        width: 28, height: 28,
-        borderRadius: 6,
+      <button key={w} onClick={() => setStrokeWidth(w)} style={{
+        width: 28, height: 28, borderRadius: 6,
         border: strokeWidth === w ? "1.5px solid var(--accent)" : "1.5px solid var(--border)",
                              background: strokeWidth === w ? "var(--accent-dim)" : "transparent",
-                             display: "flex", alignItems: "center", justifyContent: "center",
-                             cursor: "pointer",
-      }}
-      >
-      <div style={{
-        width: 14, height: w,
-        background: strokeWidth === w ? "var(--accent)" : "var(--text-muted)",
-                             borderRadius: 99,
-      }} />
+                             display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
+      }}>
+      <div style={{ width: 14, height: w, background: strokeWidth === w ? "var(--accent)" : "var(--text-muted)", borderRadius: 99 }} />
       </button>
     ))}
     </div>
@@ -802,80 +771,52 @@ export default function WhiteboardPage() {
     <div>
     <p style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "monospace", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em" }}>Zoom</p>
     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-    <button
-    onClick={() => setZoom(z => Math.max(z * 0.8, 0.2))}
-    style={{ width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--text-secondary)", cursor: "pointer" }}
-    ><ZoomOut size={12} /></button>
-    <span style={{ fontSize: 11, color: "var(--text-secondary)", fontFamily: "monospace", minWidth: 40, textAlign: "center" }}>
-    {Math.round(zoom * 100)}%
-    </span>
-    <button
-    onClick={() => setZoom(z => Math.min(z * 1.2, 5))}
-    style={{ width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--text-secondary)", cursor: "pointer" }}
-    ><ZoomIn size={12} /></button>
-    <button
-    onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}
-    style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "monospace", background: "transparent", border: "none", cursor: "pointer", padding: "0 4px" }}
-    >Reset</button>
+    <button onClick={() => setZoom(z => Math.max(z * 0.8, 0.2))} style={{ width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--text-secondary)", cursor: "pointer" }}><ZoomOut size={12} /></button>
+    <span style={{ fontSize: 11, color: "var(--text-secondary)", fontFamily: "monospace", minWidth: 40, textAlign: "center" }}>{Math.round(zoom * 100)}%</span>
+    <button onClick={() => setZoom(z => Math.min(z * 1.2, 5))} style={{ width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--text-secondary)", cursor: "pointer" }}><ZoomIn size={12} /></button>
+    <button onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }} style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "monospace", background: "transparent", border: "none", cursor: "pointer", padding: "0 4px" }}>Reset</button>
     </div>
     </div>
 
-    {/* Shapes count */}
-    <div style={{
-      padding: "6px 8px",
-      borderRadius: 8,
-      background: "var(--surface-2)",
-          fontSize: 10,
-          color: "var(--text-muted)",
-          fontFamily: "monospace",
-          display: "flex",
-          justifyContent: "space-between",
-    }}>
-    <span>Shapes</span>
+    {/* Object count */}
+    <div style={{ padding: "6px 8px", borderRadius: 8, background: "var(--surface-2)", fontSize: 10, color: "var(--text-muted)", fontFamily: "monospace", display: "flex", justifyContent: "space-between" }}>
+    <span>Objects</span>
     <span style={{ color: "var(--accent)", fontWeight: 600 }}>{shapes.length}</span>
     </div>
     </div>
 
-    {/* Bottom center: active tool indicator */}
+    {/* ── Bottom status bar ── */}
     <div
     className="absolute bottom-4 left-1/2 -translate-x-1/2"
     style={{
-      background: "var(--surface)",
-          border: "1px solid var(--accent-border)",
-          borderRadius: 99,
-          padding: "6px 16px",
-          fontSize: 11,
-          fontFamily: "monospace",
-          color: "var(--accent)",
-          zIndex: 40,
-          boxShadow: "0 0 20px rgba(0,245,160,0.1)",
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
+      background: "var(--surface)", border: "1px solid var(--accent-border)",
+          borderRadius: 99, padding: "6px 16px",
+          fontSize: 11, fontFamily: "monospace", color: "var(--accent)",
+          zIndex: 40, boxShadow: "0 0 20px rgba(0,245,160,0.1)",
+          display: "flex", alignItems: "center", gap: 8,
     }}
     >
     <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--accent)", display: "inline-block" }} />
     {toolButtons.find(t => t.id === tool)?.label?.split(" (")[0] || tool}
-    <span style={{ color: "var(--text-muted)", fontSize: 10 }}>• Scroll to zoom • Alt+drag to pan</span>
+    <span style={{ color: "var(--text-muted)", fontSize: 10 }}>• Scroll to zoom • Alt+drag to pan • Ctrl+S to save</span>
     </div>
 
-    {/* Online indicator (decorative) */}
+    {/* ── Top-left status badge ── */}
     <div
-    className="absolute top-4 left-4 flex items-center gap-2"
+    className="absolute top-4 left-20 flex items-center gap-2"
     style={{
-      background: "var(--surface)",
-          border: "1px solid var(--border)",
-          borderRadius: 99,
-          padding: "5px 12px",
-          fontSize: 11,
-          fontFamily: "monospace",
-          color: "var(--text-secondary)",
-          zIndex: 40,
+      background: "var(--surface)", border: "1px solid var(--border)",
+          borderRadius: 99, padding: "5px 12px",
+          fontSize: 11, fontFamily: "monospace", color: "var(--text-secondary)", zIndex: 40,
     }}
     >
     <Users size={12} style={{ color: "var(--accent)" }} />
-    <span>You</span>
-    <span style={{ color: "var(--text-muted)" }}>• 1 active</span>
+    <span>You • 1 active</span>
+    {saveStatus === "saved" && (
+      <span style={{ color: "var(--accent)", display: "flex", alignItems: "center", gap: 4, marginLeft: 4 }}>
+      <CheckCircle2 size={11} /> Saved
+      </span>
+    )}
     </div>
     </div>
     </div>
