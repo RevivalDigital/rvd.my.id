@@ -20,7 +20,7 @@ import {
   Clock,
 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
-import type { SiteHealth, Task, CalendarEvent } from "@/types";
+import type { SiteHealth, Task, CalendarEvent, GitActivity } from "@/types";
 import LoadingOverlay from "@/components/LoadingOverlay";
 
 const pbBaseUrl =
@@ -49,12 +49,17 @@ const tasks: Partial<Task>[] = [
   { id: "5", title: "Write blog post: Next.js 16", status: "todo", priority: "medium", assignee: "Rina", type: "content" },
 ];
 
-const gitActivity = [
-  { type: "commit", repo: "revival-web", message: "feat: add PocketBase realtime subs", author: "alexdev", branch: "main", sha: "a3f9b1c", time: "12m ago" },
-  { type: "pull_request", repo: "revival-dashboard", message: "PR: Kanban drag-and-drop", author: "rinaui", branch: "feat/kanban", sha: "", time: "1h ago", pr_status: "open" },
-  { type: "merge", repo: "revival-web", message: "Merge: social scheduler module", author: "alexdev", branch: "main", sha: "d82fe3a", time: "3h ago" },
-  { type: "deploy", repo: "revival-web", message: "Deploy to production: v1.4.2", author: "ci-bot", branch: "main", sha: "", time: "5h ago" },
-];
+const formatAgo = (iso: string) => {
+  const date = new Date(iso);
+  const diff = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (diff < 60) return `${diff}s ago`;
+  const min = Math.floor(diff / 60);
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const d = Math.floor(hr / 24);
+  return `${d}d ago`;
+};
 
 type WidgetSiteStatus = "up" | "down" | "degraded" | "unknown";
 
@@ -96,6 +101,7 @@ export default function DashboardPage() {
   const [taskRecords, setTaskRecords] = useState<Task[]>([]);
   const [eventRecords, setEventRecords] = useState<CalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [gitRecords, setGitRecords] = useState<GitActivity[]>([]);
 
   const userName = pb.authStore.model?.name || pb.authStore.model?.username || "User";
 
@@ -144,7 +150,19 @@ export default function DashboardPage() {
     const loadAll = async () => {
       try {
         setIsLoading(true);
-        await Promise.all([loadSites(), loadTasks(), loadEvents()]);
+        await Promise.all([
+          loadSites(),
+          loadTasks(),
+          loadEvents(),
+          (async () => {
+            try {
+              const list = await pb.collection("git_activity").getFullList({ sort: "-created" });
+              setGitRecords(list as unknown as GitActivity[]);
+            } catch (error) {
+              console.error("Failed to load git activity", error);
+            }
+          })(),
+        ]);
       } finally {
         setIsLoading(false);
       }
@@ -366,7 +384,7 @@ export default function DashboardPage() {
               </a>
             </div>
             <div className="space-y-3">
-              {gitActivity.map((item, i) => (
+              {gitRecords.slice(0, 4).map((item, i) => (
                 <div key={i} className="flex items-start gap-2.5">
                   <div className="mt-0.5 flex-shrink-0">{gitTypeIcon(item.type)}</div>
                   <div className="flex-1 min-w-0">
@@ -376,9 +394,12 @@ export default function DashboardPage() {
                       {item.sha && <span className="text-[10px] text-[var(--text-muted)] mono bg-white/5 px-1 rounded">{item.sha.slice(0,7)}</span>}
                     </div>
                   </div>
-                  <span className="text-[10px] text-[var(--text-muted)] flex-shrink-0">{item.time}</span>
+                  <span className="text-[10px] text-[var(--text-muted)] flex-shrink-0">{formatAgo(item.created)}</span>
                 </div>
               ))}
+              {gitRecords.length === 0 && (
+                <p className="text-[10px] text-[var(--text-muted)]">Belum ada aktivitas git.</p>
+              )}
             </div>
           </div>
 

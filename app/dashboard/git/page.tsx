@@ -1,26 +1,17 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
+import PocketBase from "pocketbase";
 import Topbar from "@/components/Topbar";
 import { GitCommit, GitPullRequest, GitMerge, GitBranch, Zap, AlertCircle, ExternalLink } from "lucide-react";
+import type { GitActivity } from "@/types";
 
-const gitData = [
-  { type: "deploy", repo: "revival-web", message: "Deploy to production: v1.4.2 🚀", author: "ci-bot", branch: "main", sha: "", time: "5 min ago", pr_status: null },
-  { type: "commit", repo: "revival-dashboard", message: "feat: add kanban drag-and-drop with HTML5 API", author: "alexdev", branch: "feat/kanban", sha: "3a9f21b", time: "42 min ago", pr_status: null },
-  { type: "pull_request", repo: "revival-dashboard", message: "PR #18: Kanban drag-and-drop", author: "rinaui", branch: "feat/kanban", sha: "", time: "1h ago", pr_status: "open" },
-  { type: "commit", repo: "revival-dashboard", message: "fix: mobile navbar hamburger animation", author: "rinaui", branch: "feat/kanban", sha: "b12c8ef", time: "2h ago", pr_status: null },
-  { type: "merge", repo: "revival-web", message: "Merge PR #15: social scheduler module", author: "alexdev", branch: "main", sha: "d82fe3a", time: "3h ago", pr_status: null },
-  { type: "commit", repo: "revival-web", message: "feat: PocketBase realtime subscriptions for notifications", author: "alexdev", branch: "main", sha: "a3f9b1c", time: "4h ago", pr_status: null },
-  { type: "pull_request", repo: "revival-web", message: "PR #15: Social scheduler module", author: "alexdev", branch: "feat/social-scheduler", sha: "", time: "6h ago", pr_status: "merged" },
-  { type: "commit", repo: "tradelog-app", message: "perf: optimize database queries for trade history", author: "alexdev", branch: "fix/perf", sha: "f209d3c", time: "Yesterday", pr_status: null },
-  { type: "commit", repo: "revival-dashboard", message: "chore: update dependencies to latest versions", author: "alexdev", branch: "main", sha: "e87a12d", time: "Yesterday", pr_status: null },
-  { type: "pull_request", repo: "tradelog-app", message: "PR #9: Performance optimization pass", author: "rinaui", branch: "fix/perf", sha: "", time: "2 days ago", pr_status: "closed" },
-];
-
-const repoStats = [
-  { repo: "revival-web", commits: 42, prs: 15, color: "#00f5a0" },
-  { repo: "revival-dashboard", commits: 28, prs: 18, color: "#1890ff" },
-  { repo: "tradelog-app", commits: 19, prs: 9, color: "#faad14" },
-];
+const pbBaseUrl =
+  process.env.NEXT_PUBLIC_POCKETBASE_URL ||
+  process.env.NEXT_PUBLIC_PB_URL ||
+  "http://127.0.0.1:8090";
+const pb = new PocketBase(pbBaseUrl);
+pb.autoCancellation(false);
 
 const typeConfig: Record<string, { icon: React.ElementType; color: string; bg: string; label: string }> = {
   commit: { icon: GitCommit, color: "var(--accent)", bg: "bg-[var(--accent-dim)]", label: "Commit" },
@@ -37,7 +28,42 @@ const prStatusColors: Record<string, string> = {
   draft: "text-[var(--text-muted)] bg-white/10",
 };
 
+const formatAgo = (iso: string) => {
+  const date = new Date(iso);
+  const diff = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (diff < 60) return `${diff}s ago`;
+  const min = Math.floor(diff / 60);
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const d = Math.floor(hr / 24);
+  return `${d}d ago`;
+};
+
 export default function GitPage() {
+  const [records, setRecords] = useState<GitActivity[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await pb.collection("git_activity").getFullList({ sort: "-created" });
+        if (!cancelled) setRecords(list as unknown as GitActivity[]);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const repoStats = useMemo(() => {
+    const counts: Record<string, { commits: number; prs: number; color: string }> = {};
+    records.forEach((r) => {
+      const key = r.repo;
+      if (!counts[key]) counts[key] = { commits: 0, prs: 0, color: "#1890ff" };
+      if (r.type === "commit") counts[key].commits += 1;
+      if (r.type === "pull_request") counts[key].prs += 1;
+    });
+    return Object.entries(counts).slice(0, 3).map(([repo, v]) => ({ repo, commits: v.commits, prs: v.prs, color: "#1890ff" }));
+  }, [records]);
+
   return (
     <div>
       <Topbar title="Git Activity" subtitle="Recent commits, PRs, and deployments" />
@@ -70,7 +96,7 @@ export default function GitPage() {
             <h2 className="font-bold text-sm">Activity Feed</h2>
           </div>
           <div className="divide-y divide-[var(--border)]">
-            {gitData.map((item, i) => {
+            {records.map((item, i) => {
               const tc = typeConfig[item.type] || typeConfig.commit;
               const Icon = tc.icon;
               return (
@@ -87,9 +113,11 @@ export default function GitPage() {
                             {item.pr_status}
                           </span>
                         )}
-                        <button className="opacity-0 group-hover:opacity-100 transition-opacity text-[var(--text-muted)] hover:text-[var(--accent)]">
-                          <ExternalLink size={12} />
-                        </button>
+                        {item.url && (
+                          <a href={item.url} target="_blank" rel="noopener noreferrer" className="opacity-0 group-hover:opacity-100 transition-opacity text-[var(--text-muted)] hover:text-[var(--accent)]">
+                            <ExternalLink size={12} />
+                          </a>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-3 mt-1.5 flex-wrap">
@@ -104,8 +132,8 @@ export default function GitPage() {
                           {item.sha.slice(0, 7)}
                         </span>
                       )}
-                      <span className="text-xs text-[var(--text-muted)]">by <span className="text-[var(--text-secondary)]">{item.author}</span></span>
-                      <span className="text-xs text-[var(--text-muted)] ml-auto">{item.time}</span>
+                      <span className="text-xs text-[var(--text-muted)]">by <span className="text-[var(--text-secondary)]">{item.author || "unknown"}</span></span>
+                      <span className="text-xs text-[var(--text-muted)] ml-auto">{formatAgo(item.created)}</span>
                     </div>
                   </div>
                 </div>

@@ -68,6 +68,41 @@ export default function FilesPage() {
   const [deleteFile, setDeleteFile] = useState<FileRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const reloadFiles = async () => {
+    try {
+      setIsLoading(true);
+      const records = await pb
+        .collection("files")
+        .getFullList({ sort: "-created", expand: "uploaded_by" });
+      const mapped: FileRecord[] = records.map((r: any) => {
+        const uploader = r.expand?.uploaded_by;
+        const uploaderName =
+          (uploader?.name as string) || (uploader?.email as string) || "";
+        const tagsArray: string[] = Array.isArray(r.tags)
+          ? (r.tags as string[])
+          : [];
+        const created = r.created as string;
+        return {
+          id: r.id,
+          name: r.name as string,
+          category: (r.category || "other") as FileCategory,
+          version: (r.version as string) || undefined,
+          size: r.size as string | undefined,
+          uploaded_by_name: uploaderName,
+          created,
+          tags: tagsArray,
+          fileName: r.file as string,
+        };
+      });
+      setItems(mapped);
+      setPage(1);
+    } catch (error) {
+      console.error("Failed to reload files", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     let cancelled = false;
 
@@ -299,6 +334,7 @@ export default function FilesPage() {
       setUploadVersion("");
       setUploadTagsText("");
       setUploadFile(null);
+      await reloadFiles();
     } catch (error) {
       console.error("Failed to upload file", error);
     } finally {
