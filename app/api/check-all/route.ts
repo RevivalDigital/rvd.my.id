@@ -1,19 +1,19 @@
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
-  const url = new URL("/api/cron/check-health", request.url);
-  const res = await fetch(url, {
-    method: "GET",
-    headers: {
-      authorization: `Bearer ${process.env.CRON_SECRET || ""}`,
-    },
-    cache: "no-store",
-  });
-  const contentType = res.headers.get("content-type") || "application/json";
-  if (contentType.includes("application/json")) {
-    const data = await res.json().catch(() => ({}));
+  const { origin } = new URL(request.url);
+  const targetUrl = `${origin}/api/cron/check-health`;
+  try {
+    const res = await fetch(targetUrl, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${process.env.CRON_SECRET || ""}`,
+      },
+      cache: "no-store",
+    });
+    const data = await res.json();
     return NextResponse.json(data, { status: res.status });
+  } catch (error: any) {
+    return NextResponse.json({ error: error?.message || "Proxy error" }, { status: 500 });
   }
-  const text = await res.text();
-  return new NextResponse(text, { status: res.status, headers: { "content-type": contentType } });
 }

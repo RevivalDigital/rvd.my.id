@@ -112,14 +112,22 @@ export default function SiteHealthPage() {
   };
 
   const handleCheckAll = async () => {
+    if (isCheckingAll) return;
     try {
       setIsCheckingAll(true);
-      const response = await fetch("/api/check-all", { method: "GET" });
-      if (!response.ok) throw new Error("Failed to trigger check");
-      alert("Semua situs sedang diperiksa...");
-    } catch (error) {
-      console.error(error);
-      alert("Gagal menjalankan pengecekan massal.");
+      const response = await fetch(`/api/check-all?t=${Date.now()}`, {
+        method: "GET",
+        cache: "no-store",
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result?.error || "Gagal menghubungi server");
+      }
+      alert(`Berhasil: ${result?.processed ?? 0} situs diperbarui.`);
+      loadSites();
+    } catch (error: any) {
+      console.error("Check All Error:", error);
+      alert(`Error: ${error?.message || "Gagal menjalankan pengecekan massal."}`);
     } finally {
       setIsCheckingAll(false);
     }
