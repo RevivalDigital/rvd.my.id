@@ -20,6 +20,13 @@ const statusConfig: Record<string, { bg: string; text: string; dot: string; labe
   unknown: { bg: "bg-white/10", text: "text-gray-400", dot: "bg-gray-400", label: "Unknown" },
 };
 
+const getPerfColor = (score: number) => {
+  if (score >= 90) return "text-emerald-400";
+  if (score >= 50) return "text-yellow-400";
+  if (score > 0) return "text-red-500";
+  return "text-gray-500";
+};
+
 const formatRelativeTime = (iso?: string) => {
   if (!iso) return "-";
   const date = new Date(iso);
@@ -170,11 +177,10 @@ export default function SiteHealthPage() {
                     </ResponsiveContainer>
                   </div>
 
-                  <div className="flex justify-end gap-3">
-                    <div className="text-right">
-                      <p className="text-[10px] text-gray-500 font-bold uppercase">Perf Score</p>
-                      <p className="text-2xl font-black text-emerald-400">{site.pagespeed.performance || '??'}</p>
-                    </div>
+                  <div className="flex gap-3 w-full md:w-auto">
+                    <PageSpeedBox label="Performance" value={typeof site.pagespeed.performance === 'number' ? site.pagespeed.performance : 0} isScore />
+                    <PageSpeedBox label="LCP" value={`${site.pagespeed.lcp || 0}s`} />
+                    <PageSpeedBox label="TTFB" value={`${site.pagespeed.ttfb || 0}ms`} />
                   </div>
                 </div>
               </div>
@@ -204,6 +210,27 @@ function Metric({ label, value }: any) {
     <div className="flex justify-between border-b border-white/5 pb-1">
       <span className="text-xs text-gray-500">{label}</span>
       <span className="text-sm font-mono font-bold">{value}</span>
+    </div>
+  );
+}
+
+function PageSpeedBox({ label, value, isScore }: { label: string; value: string | number; isScore?: boolean }) {
+  const scoreValue = typeof value === 'number' ? value : 0;
+  const colorClass = isScore ? getPerfColor(scoreValue) : "text-gray-200";
+  return (
+    <div className="bg-white/5 border border-white/5 rounded-xl p-3 flex-1 flex flex-col items-center justify-center min-w-[80px]">
+      <p className="text-[10px] text-gray-500 uppercase font-black tracking-tighter mb-1">{label}</p>
+      <div className={`text-lg font-black font-mono ${colorClass}`}>
+        {isScore && scoreValue === 0 ? "--" : value}
+      </div>
+      {isScore && scoreValue !== 0 && (
+        <div className="w-full h-1 bg-white/10 rounded-full mt-2 overflow-hidden">
+          <div
+            className={`h-full ${colorClass.replace('text', 'bg')}`}
+            style={{ width: `${scoreValue}%` }}
+          />
+        </div>
+      )}
     </div>
   );
 }
