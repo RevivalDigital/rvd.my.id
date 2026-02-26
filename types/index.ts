@@ -141,6 +141,7 @@ export interface SiteHealth {
   response_time_ms?: number;
   status_code?: number;
   uptime_percent?: number;
+  history?: number[];
   pagespeed_data?: {
     performance?: number;
     lcp?: number;
