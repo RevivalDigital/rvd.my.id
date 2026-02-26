@@ -61,6 +61,15 @@ const formatAgo = (iso: string) => {
   return `${d}d ago`;
 };
 
+const typeDefaultColor: Record<CalendarEvent["type"], string> = {
+  feature_release: "#00f5a0",
+  social_post: "#1890ff",
+  meeting: "#faad14",
+  deadline: "#ff8c00",
+  maintenance: "#ff4d4f",
+  review: "#722ed1",
+};
+
 type WidgetSiteStatus = "up" | "down" | "degraded" | "unknown";
 
 type WidgetSite = {
@@ -173,6 +182,35 @@ export default function DashboardPage() {
 
   const displayTasks = (taskRecords.length > 0 ? taskRecords : tasks) as any[];
   const displayEvents = eventRecords;
+
+  const taskEvents = useMemo(() => {
+    return displayTasks
+      .filter((task: Task) => !!task.due_date)
+      .map((task: Task) => ({
+        id: `task-${task.id}`,
+        title: task.title,
+        description: task.description,
+        type: "deadline" as CalendarEvent["type"],
+        start_at: task.due_date as string,
+        end_at: task.due_date,
+        all_day: true,
+        color: typeDefaultColor.deadline,
+        created: task.created,
+        updated: task.updated,
+        created_by: task.created_by,
+      }));
+  }, [displayTasks]);
+
+  const upcomingCombined = useMemo(() => {
+    const now = Date.now();
+    const evs = displayEvents.map((ev) => ({
+      ...ev,
+      color: ev.color || typeDefaultColor[ev.type],
+    }));
+    return [...evs, ...taskEvents]
+      .filter((e) => new Date(e.start_at).getTime() >= now)
+      .sort((a, b) => a.start_at.localeCompare(b.start_at));
+  }, [displayEvents, taskEvents]);
 
   const widgetSites: WidgetSite[] = useMemo(() => {
     const mapped = siteRecords.map((record) => {
@@ -301,7 +339,7 @@ export default function DashboardPage() {
               </a>
             </div>
             <div className="space-y-3">
-              {displayEvents.slice(0, 4).map((ev) => {
+              {upcomingCombined.slice(0, 6).map((ev) => {
                 const eventDate = new Date(ev.start_at).toLocaleDateString("id-ID", {
                   weekday: "short",
                   month: "short",
@@ -327,10 +365,16 @@ export default function DashboardPage() {
                         <Clock size={10} /> {eventDate}
                       </p>
                     </div>
+                    <span
+                      className="text-[10px] px-1.5 py-0.5 rounded-md font-medium"
+                      style={{ background: `${(ev.color || "var(--accent)")}20`, color: ev.color || "var(--accent)" }}
+                    >
+                      {ev.type.replace("_", " ")}
+                    </span>
                   </div>
                 );
               })}
-              {displayEvents.length === 0 && (
+              {upcomingCombined.length === 0 && (
                 <div className="py-6 text-center">
                   <p className="text-xs text-[var(--text-muted)]">Tidak ada jadwal mendatang.</p>
                 </div>

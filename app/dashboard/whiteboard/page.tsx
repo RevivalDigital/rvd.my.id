@@ -788,6 +788,45 @@ export default function WhiteboardPage() {
     setTimeout(() => setLinkCopied(false), 2000);
   }, []);
 
+  const addObject = useCallback((kind: ShapeType | "sticky" | "image") => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const pos = toCanvas(cx, cy);
+    if (kind === "text" || kind === "sticky") {
+      setTextTool(kind === "sticky" ? "sticky" : "text");
+      setTextScreenPos({ x: rect.width / 2, y: rect.height / 2 });
+      setTextCanvasPos(pos);
+      setTextVal("");
+      setTextActive(true);
+      return;
+    }
+    if (kind === "image") {
+      pendingImagePosRef.current = pos;
+      imageInputRef.current?.click();
+      return;
+    }
+    const w = 160, h = 100;
+    const lineW = 120;
+    const newShape: Shape = {
+      id: Math.random().toString(36).slice(2),
+      type: kind as ShapeType,
+      x: pos.x - w / 2,
+      y: pos.y - h / 2,
+      x2: kind === "line" || kind === "arrow" ? pos.x + lineW / 2 : pos.x + w / 2,
+      y2: kind === "line" || kind === "arrow" ? pos.y : pos.y + h / 2,
+      color,
+      strokeWidth,
+      fill,
+      fontSize: 18,
+      seed: Math.floor(Math.random() * 100),
+    };
+    setShapes(prev => { const next = [...prev, newShape]; pushHistory(next); return next; });
+    setSelectedId(newShape.id);
+  }, [toCanvas, color, strokeWidth, fill, pushHistory]);
+
   // ── Tool list ─────────────────────────────────────────────────────────────────
   const toolButtons: { id: Tool; icon: React.ComponentType<{ size?: number }>; label: string }[] = [
     { id: "select", icon: MousePointer2, label: "Select (V)" },
@@ -1008,6 +1047,28 @@ export default function WhiteboardPage() {
       }}
       ><Icon size={16} /></button>
     ))}
+    </div>
+
+    {/* ════════════════ LEFT: Add Object panel ─═════════════════════════════════ */}
+    <div
+      style={{
+        position: "absolute", left: 16, top: TOP_Y + 44 + 210, zIndex: 40,
+        display: "flex", flexDirection: "column", gap: 8, padding: 10,
+        background: "var(--surface)", border: "1px solid var(--border)",
+        borderRadius: 16, boxShadow: "0 8px 40px rgba(0,0,0,0.4)", minWidth: 180,
+      }}
+    >
+      <p style={{ margin: 0, fontSize: 10, color: "var(--text-muted)", fontFamily: "monospace", textTransform: "uppercase", letterSpacing: "0.08em" }}>Add Object</p>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
+        <button onClick={() => addObject("rect")} title="Rectangle" style={{ height: 32, borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "var(--text-secondary)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Square size={14} /></button>
+        <button onClick={() => addObject("ellipse")} title="Ellipse" style={{ height: 32, borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "var(--text-secondary)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Circle size={14} /></button>
+        <button onClick={() => addObject("diamond")} title="Diamond" style={{ height: 32, borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "var(--text-secondary)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Diamond size={14} /></button>
+        <button onClick={() => addObject("line")} title="Line" style={{ height: 32, borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "var(--text-secondary)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Minus size={14} /></button>
+        <button onClick={() => addObject("arrow")} title="Arrow" style={{ height: 32, borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "var(--text-secondary)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><ArrowRight size={14} /></button>
+        <button onClick={() => addObject("text")} title="Text" style={{ height: 32, borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "var(--text-secondary)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Type size={14} /></button>
+        <button onClick={() => addObject("sticky")} title="Sticky Note" style={{ height: 32, borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "var(--text-secondary)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><StickyNote size={14} /></button>
+        <button onClick={() => addObject("image")} title="Image" style={{ height: 32, borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "var(--text-secondary)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><ImagePlus size={14} /></button>
+      </div>
     </div>
 
     {/* ════════════════ RIGHT: Properties panel — starts just below zoom controls ════════════════ */}
