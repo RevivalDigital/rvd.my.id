@@ -47,6 +47,7 @@ export default function SiteHealthPage() {
   const [formName, setFormName] = useState("");
   const [formUrl, setFormUrl] = useState("");
   const [pingingId, setPingingId] = useState<string | null>(null);
+  const [isCheckingAll, setIsCheckingAll] = useState(false);
 
   // Load Data
   const loadSites = async () => {
@@ -110,6 +111,20 @@ export default function SiteHealthPage() {
     }
   };
 
+  const handleCheckAll = async () => {
+    try {
+      setIsCheckingAll(true);
+      const response = await fetch("/api/check-all", { method: "GET" });
+      if (!response.ok) throw new Error("Failed to trigger check");
+      alert("Semua situs sedang diperiksa...");
+    } catch (error) {
+      console.error(error);
+      alert("Gagal menjalankan pengecekan massal.");
+    } finally {
+      setIsCheckingAll(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
       <Topbar title="Site Health" subtitle="Monitoring 10+ Services" />
@@ -119,12 +134,22 @@ export default function SiteHealthPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <StatCard label="Online" value={`${stats.online}/${stats.total}`} icon={<CheckCircle size={18}/>} color="text-emerald-400" />
           <StatCard label="Avg Latency" value={`${stats.avgMs}ms`} icon={<Clock size={18}/>} color="text-blue-400" />
-          <button 
-            onClick={() => setIsCreateOpen(!isCreateOpen)}
-            className="bg-white/5 border border-white/10 rounded-xl flex items-center justify-center gap-2 hover:bg-white/10 transition-all"
-          >
-            <Globe size={18} /> <span>{isCreateOpen ? "Close Form" : "Add New Site"}</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleCheckAll}
+              disabled={isCheckingAll}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-white/5 border border-white/10 hover:bg-white/10 disabled:opacity-50 transition-all"
+            >
+              <RefreshCw size={14} className={isCheckingAll ? "animate-spin" : ""} />
+              {isCheckingAll ? "Checking..." : "Check All Sites"}
+            </button>
+            <button
+              onClick={() => setIsCreateOpen(!isCreateOpen)}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--accent)] text-black hover:opacity-90 transition-colors"
+            >
+              {isCreateOpen ? "Tutup Form" : "Tambah Site"}
+            </button>
+          </div>
         </div>
 
         {/* Form */}
