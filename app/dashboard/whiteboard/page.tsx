@@ -110,11 +110,25 @@ interface CanvasConfig {
 // Available fonts
 const FONT_OPTIONS = [
   { label: "DM Mono", value: "'DM Mono', monospace" },
-{ label: "Serif", value: "Georgia, serif" },
-{ label: "Sans", value: "'Segoe UI', Arial, sans-serif" },
-{ label: "Handwriting", value: "cursive" },
-{ label: "Impact", value: "Impact, fantasy" },
-{ label: "Courier", value: "'Courier New', Courier, monospace" },
+  { label: "Serif", value: "Georgia, serif" },
+  { label: "Sans", value: "'Segoe UI', Arial, sans-serif" },
+  { label: "Handwriting", value: "cursive" },
+  { label: "Impact", value: "Impact, fantasy" },
+  { label: "Courier", value: "'Courier New', Courier, monospace" },
+  { label: "Urbanist", value: "'Urbanist', sans-serif" },
+  { label: "Jakarta", value: "'Plus Jakarta Sans', sans-serif" },
+  { label: "Swanky and Moo Moo", value: "'Swanky and Moo Moo', cursive" },
+  { label: "The Girl Next Door", value: "'The Girl Next Door', cursive" },
+  { label: "Gamja Flower", value: "'Gamja Flower', cursive" },
+  { label: "Gaegu", value: "'Gaegu', cursive" },
+  { label: "Mali", value: "'Mali', cursive" },
+  { label: "Elsie", value: "'Elsie', cursive" },
+  { label: "Roboto", value: "'Roboto', sans-serif" },
+  { label: "Sue Ellen Francisco", value: "'Sue Ellen Francisco', cursive" },
+  { label: "Indie Flower", value: "'Indie Flower', cursive" },
+  { label: "Raleway", value: "'Raleway', sans-serif" },
+  { label: "Nothing You Could Do", value: "'Nothing You Could Do', cursive" },
+  { label: "Outfit", value: "'Outfit', sans-serif" },
 ];
 const FONT_SIZES = [10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 64, 80];
 
