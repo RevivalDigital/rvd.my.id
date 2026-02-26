@@ -123,7 +123,11 @@ export default function SiteHealthPage() {
       if (!response.ok) {
         throw new Error(result?.error || "Gagal menghubungi server");
       }
-      alert(`Berhasil: ${result?.processed ?? 0} situs diperbarui.`);
+      const processedCount = result?.processed ?? 0;
+      const message = processedCount > 0
+        ? `Berhasil: ${processedCount} situs diperbarui.`
+        : "Tidak ada situs yang diperbarui.";
+      alert(message);
       loadSites();
     } catch (error: any) {
       console.error("Check All Error:", error);
