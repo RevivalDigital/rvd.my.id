@@ -18,6 +18,19 @@ export async function GET(request: Request) {
   }
 
   try {
+    const adminEmail =
+      process.env.PB_ADMIN_EMAIL ||
+      process.env.POCKETBASE_ADMIN_EMAIL ||
+      process.env.NEXT_PUBLIC_PB_ADMIN_EMAIL ||
+      "";
+    const adminPassword =
+      process.env.PB_ADMIN_PASSWORD ||
+      process.env.POCKETBASE_ADMIN_PASSWORD ||
+      process.env.NEXT_PUBLIC_PB_ADMIN_PASSWORD ||
+      "";
+    if (adminEmail && adminPassword) {
+      await pb.admins.authWithPassword(adminEmail, adminPassword);
+    }
     // Ambil semua daftar situs
     const sites = await pb.collection("site_health").getFullList();
 
