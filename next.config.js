@@ -3,12 +3,12 @@ module.exports = {
   async rewrites() {
     return [
       {
-        source: '/shop/_next/:path*',
-        destination: 'https://revival-erp.vercel.app/shop/_next/:path*',
+        source: '/_next/:path*',
+        destination: 'https://revival-erp.vercel.app/_next/:path*',
       },
       {
         source: '/shop/:path*',
-        destination: 'https://revival-erp.vercel.app/shop/:path*',
+        destination: 'https://revival-erp.vercel.app/:path*',
       },
     ]
   },
