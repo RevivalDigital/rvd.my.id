@@ -1,11 +1,8 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
-  images: {
-    remotePatterns: [
-      { protocol: "https", hostname: "images.unsplash.com" },
-    ],
-  },
-};
-
-export default nextConfig;
+{
+  "rewrites": [
+    {
+      "source": "/shop/:path*",
+      "destination": "https://nama-project-shop.vercel.app/shop/:path*"
+    }
+  ]
+}
