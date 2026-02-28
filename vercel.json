@@ -11,18 +11,8 @@
       "destination": "https://revival-erp.vercel.app/shop/_next/:path*"
     },
     {
-      "source": "/shop/static/:path*",
-      "destination": "https://revival-erp.vercel.app/shop/static/:path*"
-    },
-    {
-      // Mengarahkan path /shop/ apa pun ke project ERP
       "source": "/shop/:path*",
       "destination": "https://revival-erp.vercel.app/shop/:path*"
-    },
-    {
-      // Mengarahkan root /shop ke project ERP
-      "source": "/shop",
-      "destination": "https://revival-erp.vercel.app/shop"
     }
   ]
 }
