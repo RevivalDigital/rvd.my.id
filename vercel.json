@@ -1,6 +1,14 @@
 {
-  "crons": [{
-    "path": "/api/cron",
-    "schedule": "0 7 * * *"
-  }]
+  "crons": [
+    {
+      "path": "/api/cron",
+      "schedule": "0 7 * * *"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/shop/:path*",
+      "destination": "https://revival-erp.vercel.app/shop/:path*"
+    }
+  ]
 }

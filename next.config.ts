@@ -1,8 +1,11 @@
-{
-  "rewrites": [
-    {
-      "source": "/shop/:path*",
-      "destination": "https://revival-erp.vercel.app/shop/:path*"
-    }
-  ]
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  images: {
+    unoptimized: true,
+  },
 }
+
+export default nextConfig
