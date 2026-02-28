@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/shop/:path*",
-      "destination": "https://nama-project-shop.vercel.app/shop/:path*"
+      "destination": "https://revival-erp.vercel.app/shop/:path*"
     }
   ]
 }
